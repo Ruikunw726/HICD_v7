@@ -1,0 +1,105 @@
+﻿# SECOND Dataset Configuration (V7) - 6-class labels from RGB preprocessing
+dataset: second
+description: Semantic Change Detection Dataset
+
+pre_suffix: _pre_war
+post_suffix: _post_war
+label_suffix: _post_target
+post_label_suffix: _post_target
+image_ext: .tif
+label_ext: .tif
+
+# 6-class pixel labels (preprocessed from RGB)
+# 0=Non-vegetation, 1=Tree, 2=Low-vegetation, 3=Water, 4=Building, 5=Playground
+# 255=Background/Ignore (use ignore_index in loss)
+
+# Instance branch: 1 class (Building, tracked via instances.json)
+num_targets: 1
+target_names:
+  - Building
+
+# Pixel branch: 6 classes
+num_pixel_targets: 6
+pixel_target_names:
+  - Non-vegetation
+  - Tree
+  - Low-vegetation
+  - Water
+  - Building
+  - Playground
+
+# State
+num_states: 3
+state_names:
+  - no-change
+  - increase
+  - decrease
+
+# V7
+num_change_types: 36
+change_type_names:
+  - Non-veg->Non-veg
+  - Tree->Tree
+  - Low-veg->Low-veg
+  - Water->Water
+  - Building->Building
+  - Playground->Playground
+  - Building->Non-veg
+  - Building->Tree
+  - Building->Low-veg
+  - Building->Playground
+  - Building->Water
+  - Non-veg->Building
+  - Tree->Building
+  - Low-veg->Building
+  - Playground->Building
+  - Water->Building
+  - Tree->Low-veg
+  - Low-veg->Tree
+  - Tree->Playground
+  - Playground->Tree
+  - Low-veg->Playground
+  - Playground->Low-veg
+  - Tree->Water
+  - Water->Tree
+  - Low-veg->Water
+  - Water->Low-veg
+  - Tree->Non-veg
+  - Non-veg->Tree
+  - Non-veg->Low-veg
+  - Low-veg->Non-veg
+  - Playground->Water
+  - Water->Playground
+  - Non-veg->Playground
+  - Playground->Non-veg
+  - Non-veg->Water
+  - Water->Non-veg
+num_damage_levels: 4
+
+# Branch routing
+branch_routing:
+  instance:
+    - Building
+  semantic:
+    - Non-vegetation
+    - Tree
+    - Low-vegetation
+    - Water
+    - Building
+    - Playground
+
+# Active heads
+active_heads:
+  instance_detection: true
+  change_type: true
+  damage_level: false
+  pixel_target: true
+  pixel_state: true
+
+# Ignore index for CrossEntropyLoss
+ignore_index: 255
+
+train_split: train
+val_split: val
+test_split: test
+

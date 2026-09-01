@@ -1,0 +1,67 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.so
+
+# Weights (too large)
+weights/
+*.safetensors
+*.bin
+*.pth
+*.pt
+
+# Training outputs
+checkpoints/
+runs/
+logs/
+*.csv
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Temp / debug / analysis scripts (top-level only)
+/check_labels.py
+/check_data*.py
+/check_mask*.py
+/check_pretrained.py
+/check_v2.py
+/debug_*.py
+/fix_*.py
+/fix3.py
+/fix4.py
+/analyze*.py
+/search_labels*.py
+/stats_*.py
+/test_model.py
+/fetch_papers.py
+/patch_*.py
+/_*.py
+/run_all_scenes.sh
+/run_v3.sh
+/run_v4.sh
+
+# Drawio backup
+*.drawio.bkp
+
+# Script-level temp
+/script/_*.py
+/script/test_*.py
+/script/fix_*.py
+
+# Bak files
+*.bak
+*.txt.bak
+
+# Old yaml variants
+/datasets/configs/0617final_6target.yaml
+/datasets/configs/0617final_graph.yaml
+/datasets/configs/transition_table.yaml
+stats_3d_output.txt
+/script/patch_change_head.py

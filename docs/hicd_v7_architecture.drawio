@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="draw.io" modified="2026-09-01" agent="drawio-skill" version="24.0">
+  <diagram name="HICD-v7-Architecture" id="hicd-v7">
+    <mxGraphModel dx="1800" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ===== LEFT: INPUT & BACKBONE ===== -->
+
+        <!-- T1 Input -->
+        <mxCell id="t1_in" value="&lt;b&gt;T1&lt;/b&gt;&lt;br&gt;Pre-war Image" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;verticalAlign=middle;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="30" y="180" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <!-- T2 Input -->
+        <mxCell id="t2_in" value="&lt;b&gt;T2&lt;/b&gt;&lt;br&gt;Post-war Image" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;verticalAlign=middle;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="30" y="370" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- DINOv3 Backbone (shared) -->
+        <mxCell id="backbone" value="&lt;b&gt;DINOv3 Backbone&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Frozen S0-S5, Trainable S6-S11&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Out: [C2, C3, C4, C5]&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;verticalAlign=middle;arcSize=15;dashed=1;dashPattern=5 5;" vertex="1" parent="1">
+          <mxGeometry x="180" y="155" width="160" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="backbone2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;dashPattern=5 5;opacity=0;" vertex="1" parent="1">
+          <mxGeometry x="180" y="345" width="160" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow T1 -> Backbone -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" edge="1" source="t1_in" target="backbone" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- Arrow T2 -> Backbone -->
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" edge="1" source="t2_in" target="backbone" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- NFA -->
+        <mxCell id="nfa" value="&lt;b&gt;NFA × 2&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Neighbor Feature&lt;br&gt;Aggregation&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="255" width="110" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1.5;" edge="1" source="backbone" target="nfa" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3b" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1.5;" edge="1" source="backbone2" target="nfa" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- TFM -->
+        <mxCell id="tfm" value="&lt;b&gt;TFM&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Temporal Fusion&lt;br&gt;Module&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="550" y="255" width="110" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1.5;" edge="1" source="nfa" target="tfm" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- TFM outputs label -->
+        <mxCell id="tfm_out" value="&lt;font style=&quot;font-size:9px;color:#666&quot;&gt;Fused + T1/T2 Features&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="670" y="280" width="140" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== RIGHT SIDE: THREE LAYERS ===== -->
+
+        <!-- ============ TOP LAYER: INSTANCE BRANCH ============ -->
+        <mxCell id="inst_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b85450;strokeWidth=2;dashed=1;dashPattern=8 4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="820" y="60" width="720" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="inst_label" value="&lt;b style=&quot;font-size:13px;color:#b85450&quot;&gt;Instance Branch&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="830" y="65" width="130" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Instance Adapter -->
+        <mxCell id="inst_adapter" value="&lt;b&gt;Instance&lt;br&gt;Adapter&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="840" y="100" width="90" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- InstanceRefinementModule -->
+        <mxCell id="inst_refine" value="&lt;b&gt;Instance Refinement&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;RoI Align → Cosine Sim&lt;br&gt;with State Embeddings&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="980" y="100" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Instance Output -->
+        <mxCell id="inst_out" value="&lt;b&gt;Instance State&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Per-object: no-change /&lt;br&gt;damaged / reduced&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="100" width="140" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_inst1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;strokeWidth=1.5;" edge="1" source="inst_adapter" target="inst_refine" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_inst2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;strokeWidth=1.5;" edge="1" source="inst_refine" target="inst_out" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- TFM -> Instance Adapter -->
+        <mxCell id="e_tfm_inst" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="tfm" target="inst_adapter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="300"/>
+              <mxPoint x="800" y="130"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============ MIDDLE LAYER: INTERACTION ============ -->
+        <mxCell id="inter_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#e69500;strokeWidth=2;dashed=1;dashPattern=8 4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="820" y="220" width="720" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="inter_label" value="&lt;b style=&quot;font-size:13px;color:#e69500&quot;&gt;Cross-Branch Interaction&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="830" y="225" width="200" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- ChangeGuidedROI -->
+        <mxCell id="cg_roi" value="&lt;b&gt;Change-Guided&lt;br&gt;RoI&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#e69500;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="860" y="265" width="110" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- SpatialModulation -->
+        <mxCell id="spatial_mod" value="&lt;b&gt;Spatial&lt;br&gt;Modulation&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#e69500;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="265" width="110" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- LabelStructure -->
+        <mxCell id="label_struct" value="&lt;b&gt;Label Structure&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Graph Embeddings&lt;br&gt;+ Validity Masking&lt;br&gt;+ Contrastive Loss&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#e69500;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="258" width="140" height="75" as="geometry"/>
+        </mxCell>
+
+        <!-- Consistency Loss -->
+        <mxCell id="consistency" value="&lt;b&gt;Consistency&lt;br&gt;Loss&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#e69500;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1370" y="265" width="110" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_inter1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#e69500;strokeWidth=1.5;" edge="1" source="cg_roi" target="spatial_mod" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_inter2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#e69500;strokeWidth=1.5;" edge="1" source="spatial_mod" target="label_struct" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_inter3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#e69500;strokeWidth=1.5;" edge="1" source="label_struct" target="consistency" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Big bidirectional arrow between Instance and Interaction -->
+        <mxCell id="e_inst_inter" value="&lt;font style=&quot;font-size:9px&quot;&gt;Instance ↔ Pixel&lt;br&gt;Guidance&lt;/font&gt;" style="shape=flexArrow;endArrow=classic;html=1;strokeWidth=2;fillColor=#e69500;strokeColor=#e69500;fontSize=9;fontColor=#333333;width=8;opacity=60;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1100" y="180" as="sourcePoint"/>
+            <mxPoint x="1100" y="220" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ============ BOTTOM LAYER: PIXEL BRANCH ============ -->
+        <mxCell id="pixel_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;strokeWidth=2;dashed=1;dashPattern=8 4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="820" y="400" width="720" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="pixel_label" value="&lt;b style=&quot;font-size:13px;color:#6c8ebf&quot;&gt;Pixel Branch&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="830" y="405" width="110" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Semantic Adapter -->
+        <mxCell id="sem_adapter" value="&lt;b&gt;Semantic&lt;br&gt;Adapter&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="840" y="450" width="90" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- FPN + Multi-scale Fusion -->
+        <mxCell id="fpn" value="&lt;b&gt;FPN +&lt;br&gt;Multi-scale Fusion&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="970" y="450" width="120" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Three parallel heads -->
+        <mxCell id="target_head" value="&lt;b&gt;Target Head&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;15-class&lt;br&gt;segmentation&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="410" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="state_decoder" value="&lt;b&gt;State Decoder&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Target-conditioned&lt;br&gt;7-class state&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="472" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="change_head" value="&lt;b&gt;Change Head&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Cosine similarity&lt;br&gt;T1↔T2&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="440" width="110" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- Pixel Outputs -->
+        <mxCell id="pixel_out" value="&lt;b&gt;Pixel Outputs&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Target Map + State Map&lt;br&gt;+ Change Map&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="1440" y="440" width="90" height="55" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_sem1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;" edge="1" source="sem_adapter" target="fpn" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fpn_t" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="fpn" target="target_head" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fpn_s" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="fpn" target="state_decoder" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_fpn_c" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=1.5;" edge="1" source="fpn" target="change_head" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1100" y="480"/>
+              <mxPoint x="1100" y="468"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_th_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="target_head" target="pixel_out" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_sd_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="state_decoder" target="pixel_out" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_ch_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=1.5;" edge="1" source="change_head" target="pixel_out" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- TFM -> Semantic Adapter -->
+        <mxCell id="e_tfm_sem" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=1.5;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="tfm" target="sem_adapter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="300"/>
+              <mxPoint x="800" y="480"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Big bidirectional arrow between Interaction and Pixel -->
+        <mxCell id="e_inter_pixel" value="&lt;font style=&quot;font-size:9px&quot;&gt;Refined Features&lt;/font&gt;" style="shape=flexArrow;endArrow=classic;html=1;strokeWidth=2;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontSize=9;fontColor=#333333;width=8;opacity=60;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1100" y="360" as="sourcePoint"/>
+            <mxPoint x="1100" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== LOSS FUNCTIONS (rightmost) ===== -->
+        <mxCell id="loss_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;strokeWidth=1;dashed=1;dashPattern=4 4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="80" width="170" height="490" as="geometry"/>
+        </mxCell>
+        <mxCell id="loss_label" value="&lt;b style=&quot;font-size:13px;color:#666&quot;&gt;Loss Functions&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1590" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="loss1" value="Target CE + Dice" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1575" y="120" width="140" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="loss2" value="State CE + Dice (w=2.0)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1575" y="160" width="140" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="loss3" value="Change CE + Dice" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1575" y="200" width="140" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="loss4" value="Instance Consistency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1575" y="240" width="140" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="loss5" value="Box Consistency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1575" y="280" width="140" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="loss6" value="Contrastive Label&lt;br&gt;Structure" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1575" y="320" width="140" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Dotted arrows to losses -->
+        <mxCell id="e_loss_inst" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1;dashed=1;" edge="1" source="inst_out" target="loss4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_loss_pixel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;strokeWidth=1;dashed=1;" edge="1" source="pixel_out" target="loss3" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1550" y="468"/>
+              <mxPoint x="1550" y="215"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== BOTTOM: GRAPH LABEL SPACE ===== -->
+        <mxCell id="graph_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9673a6;strokeWidth=2;dashed=1;dashPattern=8 4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="30" y="590" width="530" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="graph_label" value="&lt;b style=&quot;font-size:13px;color:#9673a6&quot;&gt;Graph-Structured Label Space&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="595" width="230" height="25" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="graph1" value="&lt;b&gt;15 Target Classes&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Farmland, Runway, Taxiway,&lt;br&gt;Apron, Bridge, Highway, ...&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="50" y="625" width="150" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="graph2" value="&lt;b&gt;7 States&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;no-change, damaged,&lt;br&gt;reduced, added, ...&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="220" y="625" width="150" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="graph3" value="&lt;b&gt;Validity Constraints&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Target-state pairs,&lt;br&gt;scene-aware masks&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;verticalAlign=middle;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="390" y="625" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrow from graph to label_struct -->
+        <mxCell id="e_graph_ls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=1.5;dashed=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.8;entryY=1;entryDx=0;entryDy=0;" edge="1" source="graph_bg" target="inter_bg" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== TITLE ===== -->
+        <mxCell id="title" value="&lt;b style=&quot;font-size:18px&quot;&gt;HICD v7: Hierarchical Instance Change Detection&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;" vertex="1" parent="1">
+          <mxGeometry x="500" y="10" width="420" height="35" as="geometry"/>
+        </mxCell>
+
+        <!-- DINOv3 label -->
+        <mxCell id="dinov3_tag" value="&lt;font style=&quot;font-size:9px;color:#999&quot;&gt;DINOv3-Base: 86.4M params&lt;br&gt;Frozen S0-S5 (43.1M frozen)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="185" y="130" width="150" height="30" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,62 @@
+﻿# XBD Dataset Configuration (V7)
+dataset: xbd
+description: xBD Building Damage Assessment
+
+pre_suffix: _pre_war
+post_suffix: _post_war
+label_suffix: _target
+image_ext: .png
+label_ext: .tif
+
+# Pixel labels: 0=background, 1-5=Building with damage levels
+num_targets: 1
+target_names:
+  - Building
+
+num_pixel_targets: 6
+pixel_target_names:
+  - background
+  - no-damage
+  - minor-damage
+  - major-damage
+  - destroyed
+  - un-classified
+
+num_states: 5
+state_names:
+  - none
+  - no-damage
+  - minor-damage
+  - major-damage
+  - destroyed
+
+num_change_types: 3
+change_type_names:
+  - no-change
+  - increase
+  - decrease
+num_damage_levels: 5
+
+branch_routing:
+  instance:
+    - Building
+  semantic:
+    - background
+    - no-damage
+    - minor-damage
+    - major-damage
+    - destroyed
+    - un-classified
+
+active_heads:
+  instance_detection: true
+  change_type: true
+  damage_level: false
+  pixel_target: true
+  pixel_state: true
+
+ignore_index: 255
+
+train_split: train
+val_split: val
+test_split: test
