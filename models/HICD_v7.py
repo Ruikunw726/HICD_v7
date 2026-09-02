@@ -15,14 +15,11 @@ from .modules import (
     NeighborFeatureAggregation,
     MultiScaleTemporalFusion,
     MultiScaleAdapter,
-    ChangeGuidedROI,
-    SpatialModulation,
-    BoxConsistencyLoss,
     LearnableStateEmbeddings,
     LabelStructure,
     PixelStateHead,
 )
-from .heads.proposal_head import InstanceRefinementModule
+from .heads.proposal_head import VotingRefinementModule
 from .losses import V7Loss
 
 
@@ -61,21 +58,17 @@ class HICD_v7(nn.Module):
         self.nfa_t1 = NeighborFeatureAggregation(in_channels=backbone_channels, out_channels=hidden_dim)
         self.nfa_t2 = NeighborFeatureAggregation(in_channels=backbone_channels, out_channels=hidden_dim)
         self.tfm = MultiScaleTemporalFusion(in_channels=[hidden_dim]*4, out_channels=[hidden_dim]*4)
-        self.instance_adapter = MultiScaleAdapter(in_channels=[hidden_dim]*4, adapter_channels=hidden_dim//4)
         self.semantic_adapter = MultiScaleAdapter(in_channels=[hidden_dim]*4, adapter_channels=hidden_dim//4)
 
         self.label_structure = LabelStructure(
             num_targets=num_pixel_targets, num_states=num_states, embed_dim=embed_dim,
         )
-        self.shared_state_embeddings = LearnableStateEmbeddings(num_states=num_states, embed_dim=hidden_dim)
-        self.instance_head = InstanceRefinementModule(hidden_dim=hidden_dim, num_states=num_states, roi_size=7, spatial_scale=1.0)
+        self.instance_head = VotingRefinementModule(num_states=num_states, roi_size=7)
         self.semantic_head = PixelStateHead(
             num_targets=num_pixel_targets, num_states=num_states,
             in_channels=hidden_dim, embed_dim=embed_dim, hidden_dim=hidden_dim,
         )
-        self.change_guided_roi = ChangeGuidedROI(in_channels=hidden_dim, change_channels=1)
-        self.spatial_modulation = SpatialModulation(channels=hidden_dim)
-        self.box_consistency_loss = BoxConsistencyLoss()
+        # Interaction modules removed - handled by VotingRefinementModule
 
         config['num_pixel_targets'] = num_pixel_targets
         self.loss_fn = V7Loss(config)
@@ -83,35 +76,28 @@ class HICD_v7(nn.Module):
     def forward(self, img_t1, img_t2, targets=None):
         B = img_t1.shape[0]
 
+        # Backbone + temporal fusion
         feat_t1_list = self.backbone(img_t1)
         feat_t2_list = self.backbone(img_t2)
         nfa_t1 = self.nfa_t1(*feat_t1_list)
         nfa_t2 = self.nfa_t2(*feat_t2_list)
-        fused_features, t1_features, t2_features = self.tfm(nfa_t1, nfa_t2)
+        fused_features, _, _ = self.tfm(nfa_t1, nfa_t2)
 
-        inst_features = self.instance_adapter(fused_features)
+        # Adapters
         sem_features = self.semantic_adapter(fused_features)
 
-        state_emb_weight = self.shared_state_embeddings.get_weight()
-
-        target_logits, state_logits, change_logits = self.semantic_head(
-            sem_features, t1_features, t2_features, label_structure=self.label_structure,
+        # Pixel branch: target + state
+        target_logits, state_logits = self.semantic_head(
+            sem_features, label_structure=self.label_structure,
         )
 
-        inst_feat_single = inst_features[0] if isinstance(inst_features, list) else inst_features
-        inst_state_logits, inst_roi_features, proposals = self.instance_head(
-            inst_feat_single, state_logits_pixel=state_logits,
+        # Instance branch: voting refinement on pixel predictions
+        refined_state_logits, refine_consistency, proposals = self.instance_head(
+            state_logits_pixel=state_logits,
+            target_logits=target_logits,
         )
 
-        # Save state logits before interaction (interaction modifies roi_features)
-        inst_state_logits_for_loss = inst_state_logits
-        # Cross-branch interaction
-        if proposals and any(len(p) > 0 for p in proposals):
-            inst_state_logits, inst_features = self._instance_interaction(
-                inst_features, inst_roi_features, proposals, change_logits,
-            )
-
-        # Contrastive losses
+        # Contrastive losses from label structure
         contrastive_losses = {}
         if targets is not None:
             target_gt = targets.get('target_gt')
@@ -121,20 +107,11 @@ class HICD_v7(nn.Module):
                     target_logits, state_logits, target_gt, state_gt,
                 )
 
-        consistency_loss = torch.tensor(0.0, device=img_t1.device)
-        if inst_state_logits.shape[0] > 0 and proposals and any(len(p) > 0 for p in proposals):
-            consistency_loss = self.instance_head.compute_consistency_loss(
-                inst_state_logits_for_loss, proposals, state_logits,
-            )
-
         predictions = {
             'target_logits': target_logits,
-            'state_logits': state_logits,
-            'change_logits': change_logits,
-            'inst_state_logits': inst_state_logits_for_loss,
-            'inst_roi_features': inst_roi_features,
+            'state_logits': refined_state_logits,  # Use refined state
             'proposals': proposals,
-            'consistency_loss': consistency_loss,
+            'refine_consistency_loss': refine_consistency,
             'contrastive_losses': contrastive_losses,
         }
         if targets is not None:
@@ -144,33 +121,6 @@ class HICD_v7(nn.Module):
             loss_dict = {}
         return predictions, loss, loss_dict
 
-    def _instance_interaction(self, features, roi_features, proposals, change_logits):
-        B, C, H, W = features[0].shape if isinstance(features, list) else features.shape
-        flat_features = features[0] if isinstance(features, list) else features
-
-        change_for_roi = change_logits[:, 1:2] if change_logits.shape[1] > 1 else change_logits[:, 0:1]
-        change_context = self.change_guided_roi(roi_features, proposals, change_for_roi)
-        if isinstance(change_context, torch.Tensor) and change_context.numel() > 0:
-            roi_features = roi_features + change_context
-
-        inst_heatmap = torch.zeros(B, 1, H, W, device=flat_features.device)
-        for b_idx, boxes in enumerate(proposals):
-            if len(boxes) == 0:
-                continue
-            for box in boxes:
-                cx, cy, bw, bh = box.tolist()
-                x1 = max(0, int((cx - bw/2) * W))
-                x2 = min(W, int((cx + bw/2) * W))
-                y1 = max(0, int((cy - bh/2) * H))
-                y2 = min(H, int((cy + bh/2) * H))
-                inst_heatmap[b_idx, 0, y1:y2, x1:x2] = 1.0
-        if isinstance(features, list):
-            for i in range(len(features)):
-                features[i] = self.spatial_modulation(features[i], inst_heatmap)
-        else:
-            features = self.spatial_modulation(features, inst_heatmap)
-
-        return roi_features, features
 
     def freeze_backbone(self):
         self.backbone.freeze()
@@ -185,10 +135,8 @@ class HICD_v7(nn.Module):
             param_groups.append({'params': backbone_trainable, 'lr': lr*0.1, 'weight_decay': weight_decay, 'name': 'backbone'})
         ntfm_params = list(self.nfa_t1.parameters()) + list(self.nfa_t2.parameters()) + list(self.tfm.parameters())
         param_groups.append({'params': ntfm_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'nfa_tfm'})
-        adapter_params = list(self.instance_adapter.parameters()) + list(self.semantic_adapter.parameters())
+        adapter_params = list(self.semantic_adapter.parameters())
         param_groups.append({'params': adapter_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'adapters'})
-        interaction_params = list(self.change_guided_roi.parameters()) + list(self.spatial_modulation.parameters()) + list(self.box_consistency_loss.parameters())
-        param_groups.append({'params': interaction_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'interaction'})
         param_groups.append({'params': list(self.instance_head.parameters()), 'lr': lr, 'weight_decay': weight_decay, 'name': 'instance_head'})
         label_params = list(self.label_structure.parameters())
         param_groups.append({'params': label_params, 'lr': lr*0.5, 'weight_decay': weight_decay, 'name': 'label_structure'})

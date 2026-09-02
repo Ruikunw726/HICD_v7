@@ -50,9 +50,16 @@ def run_tta(model, img1, img2, num_classes=6):
     with torch.no_grad():
         for name, i1, i2, inv_info in augmentations:
             predictions = model(i1, i2)
-            target_prob = F.softmax(predictions['change_heatmap'], dim=1)
-            state_prob = F.softmax(predictions.get('state_logits_pixel', predictions['change_heatmap']), dim=1)
-            change_prob = F.softmax(predictions['change_logits'], dim=1)
+            target_prob = F.softmax(predictions.get('target_logits', predictions.get('change_heatmap')), dim=1)
+            state_prob = F.softmax(predictions.get('state_logits', predictions.get('state_logits_pixel', predictions.get('target_logits'))), dim=1)
+            # Change probability from state logits
+            st_logits = predictions.get('state_logits', predictions.get('state_logits_pixel'))
+            if st_logits is not None and st_logits.shape[1] > 1:
+                change_prob = torch.zeros_like(st_logits[:, :2])
+                change_prob[:, 0] = st_logits[:, 0]
+                change_prob[:, 1] = st_logits[:, 1:].sum(dim=1)
+            else:
+                change_prob = F.softmax(predictions.get('target_logits', predictions.get('change_heatmap')), dim=1)
 
             # Inverse transform
             if inv_info[0] == 'scale':

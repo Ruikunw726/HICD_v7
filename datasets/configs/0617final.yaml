@@ -236,4 +236,6 @@ train_split: train
 val_split: val
 test_split: test
 w_state_pixel: 2.0  # Boost state loss weight
+state_ignore_targets:
+  - 0  # Farmland (always no-change, not informative)
 

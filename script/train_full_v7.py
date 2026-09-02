@@ -55,12 +55,8 @@ def parse_args():
     # Loss weights
     parser.add_argument('--w_pixel', type=float, default=1.0)
     parser.add_argument('--w_state', type=float, default=2.0)
-    parser.add_argument('--w_bbox', type=float, default=5.0)
-    parser.add_argument('--w_giou', type=float, default=2.0)
     parser.add_argument('--w_consistency', type=float, default=0.3)
     parser.add_argument('--pixel_class_weights', type=float, nargs='+', default=None,
-                        help='Class weights for pixel CE loss, e.g. --pixel_class_weights 2.9 0.16 0.06 2.5 0.09 0.31')
-    parser.add_argument('--inst_state_weights', type=float, nargs=3, default=None,
                         help='Instance state CE weights [no_change, increase, decrease]')
     parser.add_argument('--state_pixel_weights', type=float, nargs=7, default=None,
                         help='Class weights for pixel state CE loss [nochange,damaged,reduced,added,extended,replaced,none]')
@@ -168,14 +164,9 @@ class TrainerV7:
         cfg['embed_dim'] = self.args.embed_dim
         cfg['w_pixel'] = self.args.w_pixel
         cfg['w_state'] = self.args.w_state
-        cfg['w_bbox'] = self.args.w_bbox
-        cfg['w_giou'] = self.args.w_giou
-        cfg['w_consistency'] = self.args.w_consistency
         cfg['active_heads'] = self.dataset_config.get('active_heads', {})
         cfg['pixel_class_weights'] = self.args.pixel_class_weights if self.args.pixel_class_weights is not None else self.dataset_config.get('pixel_class_weights', None)
-        cfg['inst_state_weights'] = self.args.inst_state_weights
         cfg['state_pixel_weights'] = self.args.state_pixel_weights if self.args.state_pixel_weights is not None else self.dataset_config.get('state_pixel_weights', None)
-        cfg['w_state_pixel'] = self.args.w_state_pixel if self.args.w_state_pixel != 1.0 else self.dataset_config.get('w_state_pixel', 1.0)
         cfg['w_change'] = self.args.w_change
         cfg['w_contrastive'] = self.args.w_contrastive
         return cfg
@@ -345,6 +336,20 @@ class TrainerV7:
         print(f'\n--- Validation Epoch {epoch+1} ---')
         print(f'Val Loss: {avg_loss:.4f}')
         print(self.evaluator.format_results(eval_results))
+
+        # Update adaptive class weights based on validation IoU
+        if hasattr(self.model, "loss_fn") and hasattr(self.model.loss_fn, "update_adaptive_weights"):
+            iou_per_class = eval_results.get("target_iou", None)
+            if iou_per_class is not None:
+                state_iou = eval_results.get("state_iou", None)
+                self.model.loss_fn.update_adaptive_weights(iou_per_class, per_state_iou=state_iou)
+                w = self.model.loss_fn.get_class_weights()
+                wlist = [round(x, 3) for x in w.tolist()]
+                print(f"  Adaptive target weights: {wlist}")
+                if hasattr(self.model.loss_fn, "state_weighter"):
+                    sw = self.model.loss_fn.state_weighter.get_weights()
+                    swlist = [round(x, 3) for x in sw.tolist()]
+                    print(f"  Adaptive state weights: {swlist}")
         print('---')
 
         self.model.train()

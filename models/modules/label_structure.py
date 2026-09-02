@@ -383,7 +383,7 @@ class PixelStateHead(nn.Module):
     2. Target prediction head (unchanged)
     3. Hierarchical condition decoder for state (NEW)
     4. Validity masking via LabelStructure (NEW)
-    5. Change detection via cosine similarity (unchanged)
+    5. Change detection via cosine similarity (removed (non-learnable, redundant with state))
     """
     
     def __init__(self, num_targets, num_states, in_channels=128, embed_dim=64, hidden_dim=128):
@@ -429,17 +429,14 @@ class PixelStateHead(nn.Module):
             hidden_dim=hidden_dim,
         )
     
-    def forward(self, features, t1_features=None, t2_features=None, label_structure=None):
+    def forward(self, features, label_structure=None):
         """
         Args:
             features: list of [B, C, H_i, W_i] fused features (P2-P5)
-            t1_features: T1-specific features for change detection
-            t2_features: T2-specific features for change detection
             label_structure: LabelStructure module for validity masking
         Returns:
             target_logits: [B, num_targets, H, W]
             state_logits: [B, num_states, H, W]
-            change_logits: [B, 2, H, W]
         """
         fpn_features = self.fpn(features)
         p2 = fpn_features[0]
@@ -460,32 +457,9 @@ class PixelStateHead(nn.Module):
         # State prediction conditioned on target
         state_logits, _ = self.state_decoder(fused, target_logits, label_structure)
         
-        # Change detection (unchanged)
-        change_logits = self._compute_change(t1_features, t2_features, p2.shape)
         
-        return target_logits, state_logits, change_logits
+        return target_logits, state_logits
     
-    def _compute_change(self, t1_features, t2_features, ref_shape):
-        """Cosine similarity change detection (unchanged)."""
-        B, C, H, W = ref_shape
-        if t1_features is not None and t2_features is not None:
-            t1_fpn = self.fpn(t1_features)
-            t2_fpn = self.fpn(t2_features)
-            t1_p3_up = F.interpolate(t1_fpn[1], size=(H, W), mode='bilinear', align_corners=True)
-            t1_p4_up = F.interpolate(t1_fpn[2], size=(H, W), mode='bilinear', align_corners=True)
-            t1_p5_up = F.interpolate(t1_fpn[3], size=(H, W), mode='bilinear', align_corners=True)
-            t1_fused = self.ms_fuse(torch.cat([t1_fpn[0], t1_p3_up, t1_p4_up, t1_p5_up], dim=1))
-            t2_p3_up = F.interpolate(t2_fpn[1], size=(H, W), mode='bilinear', align_corners=True)
-            t2_p4_up = F.interpolate(t2_fpn[2], size=(H, W), mode='bilinear', align_corners=True)
-            t2_p5_up = F.interpolate(t2_fpn[3], size=(H, W), mode='bilinear', align_corners=True)
-            t2_fused = self.ms_fuse(torch.cat([t2_fpn[0], t2_p3_up, t2_p4_up, t2_p5_up], dim=1))
-            cos_sim = F.cosine_similarity(t1_fused, t2_fused, dim=1)
-            cos_sim = cos_sim * 0.5 + 0.5
-            change_logits = torch.stack([1 - cos_sim, cos_sim], dim=1)
-        else:
-            change_logits = torch.zeros(B, 2, H, W, device=ref_shape[0].device 
-                                         if torch.is_tensor(ref_shape[0]) else 'cpu')
-        return change_logits
 
 
 
