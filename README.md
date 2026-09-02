@@ -43,7 +43,7 @@
 
 ## 模型架构
 
-`
+```
 T1 ──┐                                     T2 ──┐
      +---- DINOv3 Backbone (shared) ----+
      |    frozen S0-S5  train S6-S11    |
@@ -83,11 +83,11 @@ T1 ──┐                                     T2 ──┐
                       |  contrastive     |
                       |  hierarchy       |
                       +-----------------+
-`
+```
 
 ## 项目结构
 
-`
+```
 HICD_v7/
 +-- models/
 |   +-- HICD_v7.py              # main model
@@ -121,7 +121,7 @@ HICD_v7/
 |   +-- infer_v7.py             # inference
 +-- weights/
     +-- model.safetensors       # DINOv3-Base pretrained
-`
+```
 
 ## 快速开始
 
