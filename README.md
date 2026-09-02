@@ -43,82 +43,85 @@
 
 ## 模型架构
 
-```
-T1 (Pre-war) ─┐
-               ├─→ DINOv3 Backbone (frozen S0-S5, trainable S6-S11)
-T2 (Post-war)─┘         │
-                         ▼
-                   NFA × 2 → TFM (fused features)
-                         │
-                  Semantic Adapter
-                         │
-                ┌────────▼────────┐
-                │  PixelStateHead  │
-                │  ┌────┐ ┌─────┐ │
-                │  │FPN │→│Fuse │ │
-                │  └────┘ └──┬──┘ │
-                │     ┌──────┴──────┐
-                │  Target Head   State Decoder
-                │  (15类目标)    (7类状态, target-conditioned)
-                └───────┬───────┬───────┘
-                        │       │
-                 target_logits  state_logits
-                        │       │
-                        │  ┌────▼──────────────┐
-                        │  │VotingRefinement    │
-                        └─►│Module              │
-                           │ · 连通域proposal   │
-                           │ · 注意力加权       │
-                           │ · 一致性精炼       │
-                           └────────┬──────────┘
-                                    │
-                           refined_state_logits
-                                    │
-                           ┌────────▼────────┐
-                           │  LabelStructure  │
-                           │ · 有效性约束     │
-                           │ · 对比学习       │
-                           │ · 类别层级       │
-                           └─────────────────┘
-```
+`
+T1 ──┐                                     T2 ──┐
+     +---- DINOv3 Backbone (shared) ----+
+     |    frozen S0-S5  train S6-S11    |
+     |    4-scale feature maps          |
+     +--- NFA_t1 -+          +- NFA_t2 -+
+                   +--- TFM --+
+                        |
+                  fused features (4 scales)
+                        |
+                 MultiScale Adapter
+                        |
+             +----------v----------+
+             |   PixelStateHead    |
+             |                     |
+             |  FPN + MS-Fusion    |
+             |       /      \      |
+             | TargetHead  State   |
+             | (15 cls)  Decoder   |
+             |           (7 cls)   |
+             +-----+-------+------+
+                   |       |
+           target_logits  state_logits
+                   |       |
+                   |  +----v--------------+
+                   |  | VotingRefinement  |
+                   +->| Module            |
+                      |  connected comp.  |
+                      |  attention weight |
+                      |  consistency loss |
+                      +--------+----------+
+                               |
+                      refined_state_logits
+                               |
+                      +--------v--------+
+                      |  LabelStructure  |
+                      |  validity mask   |
+                      |  contrastive     |
+                      |  hierarchy       |
+                      +-----------------+
+`
 
 ## 项目结构
 
-```
+`
 HICD_v7/
-├── models/
-│   ├── HICD_v7.py                  # 主模型
-│   ├── backbone/
-│   │   ├── dinov3.py               # DINOv3 backbone (Safetensors 加载)
-│   │   └── lwganet.py              # LWGANet backbone (备选)
-│   ├── heads/
-│   │   ├── semantic_head.py        # FPN + Target/State 三头 (legacy)
-│   │   └── proposal_head.py        # VotingRefinementModule
-│   ├── modules/
-│   │   ├── nfa.py                  # Neighbor Feature Aggregation
-│   │   ├── tfm.py                  # Temporal Fusion Module
-│   │   ├── task_adapter.py         # MultiScale Adapter
-│   │   ├── label_structure.py      # 图结构标签空间 + PixelStateHead + HierarchicalConditionDecoder
-│   │   └── clip_module.py          # LearnableStateEmbeddings
-│   └── losses/
-│       └── v7_loss.py              # 统一损失 (pixel + state + refinement + contrastive)
-├── datasets/
-│   ├── dataset_v7.py               # 数据加载 + copy-paste + 增强
-│   └── configs/
-│       ├── 0617final.yaml          # 标签映射 + 类别权重 + 状态权重
-│       ├── second.yaml             # SECOND 配置
-│       └── xbd.yaml                # XBD 配置
-├── evaluation/
-│   ├── icd_eval_v6.py              # 评估器 (mIoU + SeK + per-class)
-│   └── icd_protocol.py             # ICD 评估协议
-├── script/
-│   ├── train_full_v7.py            # 训练脚本 (tqdm + CSV 日志 + 自适应权重)
-│   ├── tta_eval.py                 # TTA 推理
-│   ├── cut_patches.py              # 数据切分工具
-│   └── infer_v7.py                 # 推理脚本
-└── weights/
-    └── model.safetensors           # DINOv3-Base 预训练权重 (需单独下载)
-```
++-- models/
+|   +-- HICD_v7.py              # main model
+|   +-- backbone/
+|   |   +-- dinov3.py           # DINOv3 backbone
+|   |   +-- lwganet.py          # LWGANet (backup)
+|   +-- heads/
+|   |   +-- semantic_head.py    # FPN + heads (legacy)
+|   |   +-- proposal_head.py    # VotingRefinementModule
+|   +-- modules/
+|   |   +-- nfa.py              # Neighbor Feature Aggregation
+|   |   +-- tfm.py              # Temporal Fusion Module
+|   |   +-- task_adapter.py     # MultiScale Adapter
+|   |   +-- label_structure.py  # Graph label + PixelStateHead
+|   |   +-- clip_module.py      # LearnableStateEmbeddings
+|   +-- losses/
+|       +-- v7_loss.py          # unified loss (adaptive weights)
++-- datasets/
+|   +-- dataset_v7.py           # dataloader + copy-paste
+|   +-- configs/
+|       +-- 0617final.yaml      # war damage config
+|       +-- second.yaml         # SECOND config
+|       +-- xbd.yaml            # XBD config
++-- evaluation/
+|   +-- icd_eval_v6.py          # evaluator (mIoU + SeK)
+|   +-- icd_protocol.py         # ICD protocol
++-- script/
+|   +-- train_full_v7.py        # training (tqdm + CSV + adaptive)
+|   +-- tta_eval.py             # TTA inference
+|   +-- cut_patches.py          # patch cutting tool
+|   +-- infer_v7.py             # inference
++-- weights/
+    +-- model.safetensors       # DINOv3-Base pretrained
+`
 
 ## 快速开始
 
