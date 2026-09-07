@@ -129,16 +129,19 @@ class V7Loss(nn.Module):
         self.state_ce = nn.CrossEntropyLoss(ignore_index=ignore_idx, label_smoothing=0.05)
         self.state_dice = DiceLoss(ignore_index=ignore_idx)
 
-        # State adaptive weighter
+        # State adaptive weighter (with initial weights from config)
         num_states = config.get("num_states", 7)
+        state_weights = config.get("state_pixel_weights", None)
         self.state_weighter = AdaptiveClassWeighter(
-            num_states, momentum=0.9, min_weight=0.1, max_weight=10.0
+            num_states, base_weights=state_weights, momentum=0.9, min_weight=0.1, max_weight=10.0
         )
 
         # Weights
         self.w_pixel = config.get("w_pixel", 1.0)
-        self.w_state = config.get("w_state_pixel", 2.0)
+        self.w_state = config.get("w_state", 2.0)
         self.w_refine = config.get("w_refine", 0.5)
+        self.refine_warmup_miou = config.get("refine_warmup_miou", 0.5)
+        self.current_target_miou = 0.0  # Updated each epoch
         self.w_contrastive = config.get("w_contrastive", 0.5)
 
     def update_adaptive_weights(self, per_class_iou, per_state_iou=None):
@@ -150,6 +153,30 @@ class V7Loss(nn.Module):
     def get_class_weights(self):
         """Get current adaptive weights for logging."""
         return self.adaptive_weighter.get_weights()
+
+    def set_phase(self, phase, config=None):
+        """Switch between training phases with different class weights."""
+        if phase == 1:
+            pw = [0.0, 10.0, 10.0, 5.0, 50.0, 5.0, 0.0, 50.0, 50.0, 50.0, 10.0, 10.0, 50.0, 20.0, 10.0]
+            sw = [0.0, 5.0, 8.0, 8.0, 8.0, 8.0, 0.0]
+            print("[Phase 1] Rare-class focused weights activated")
+        else:
+            if config:
+                pw = config.get("pixel_class_weights", None)
+                sw = config.get("state_pixel_weights", None)
+            else:
+                pw = None
+                sw = None
+            print("[Phase 2] Normal class weights restored")
+        if pw is not None:
+            self.adaptive_weighter.weights = torch.tensor(pw, dtype=torch.float32)
+        if sw is not None:
+            self.state_weighter.weights = torch.tensor(sw, dtype=torch.float32)
+
+
+    def set_target_miou(self, miou):
+        """Update current target mIoU for refine warmup scheduling."""
+        self.current_target_miou = miou
 
     def forward(self, predictions, targets):
         loss_dict = {}
@@ -173,38 +200,59 @@ class V7Loss(nn.Module):
                 loss_dict["pixel_dice"] = dice.item()
         loss_dict["loss_pixel"] = loss_pixel.item()
 
-        # === 2. Pixel State Loss ===
+        # === 2. Dynamic State Loss (target-conditioned validity) ===
         loss_state = _zero(device)
         if "state_logits" in predictions and "state_gt" in targets:
             state_logits = predictions["state_logits"]
             if state_logits.shape[0] > 0:
-                non_bg = (targets.get("target_gt", torch.zeros_like(targets["state_gt"])) != 255)
-                state_gt = targets["state_gt"].clamp(0, state_logits.shape[1] - 1).clone()
-                state_gt[~non_bg] = 255
-                # Adaptive state class weights (safe: only if valid targets exist)
-                valid_count = (state_gt != 255).sum().item()
+                target_gt = targets.get("target_gt", torch.zeros_like(targets["state_gt"]))
+                # Exclude background
+                valid_mask = (target_gt != 255)
+                # Ignore state 6 (none) - only background uses this after crater relabeling
+                state_gt_raw_tmp = targets["state_gt"].clamp(0, state_logits.shape[1] - 1)
+                valid_mask = valid_mask & (state_gt_raw_tmp != 6)
+                # Dynamic validity: per-pixel mask based on (target, state) graph
+                # Get validity matrix from label_structure via predictions
+                validity = predictions.get("validity_matrix")
+                if validity is not None:
+                    # validity: [num_targets, num_states] soft scores
+                    # For each pixel, look up valid states for its target
+                    # target_gt: [B, H, W] -> one-hot -> [B, T, H, W]
+                    num_t = validity.shape[0]
+                    target_gt_clamped = target_gt.clamp(0, num_t - 1)
+                    target_onehot = F.one_hot(target_gt_clamped, num_t).permute(0, 3, 1, 2).float()
+                    # Per-pixel validity: [B, S, H, W]
+                    pixel_validity = torch.einsum('bthw,ts->bshw', target_onehot, validity)
+                    # Invalid states for this target: set state GT to 255
+                    state_gt_raw = targets["state_gt"].clamp(0, state_logits.shape[1] - 1).clone()
+                    # Gather validity for the GT state of each pixel
+                    gt_validity = pixel_validity.gather(1, state_gt_raw.unsqueeze(1)).squeeze(1)
+                    # Pixels where GT state is invalid for the predicted target
+                    invalid_state = (gt_validity < 0.05) & valid_mask
+                    valid_mask = valid_mask & ~invalid_state
+                valid_count = valid_mask.sum().item()
                 if valid_count > 0:
+                    state_gt = targets["state_gt"].clamp(0, state_logits.shape[1] - 1).clone()
+                    state_gt[~valid_mask] = 255
                     st_weights = self.state_weighter.get_weights().to(device)
                     self.state_ce.weight = st_weights
-                ce = self.state_ce(state_logits, state_gt)
-                ce = torch.nan_to_num(ce, nan=0.0)
-                dice = self.state_dice(state_logits, state_gt)
-                dice = torch.nan_to_num(dice, nan=0.0)
-                loss_state = ce + dice
-                loss_dict["pixel_state_ce"] = ce.item()
-                loss_dict["pixel_state_dice"] = dice.item()
+                    ce = self.state_ce(state_logits, state_gt)
+                    ce = torch.nan_to_num(ce, nan=0.0)
+                    dice = self.state_dice(state_logits, state_gt)
+                    dice = torch.nan_to_num(dice, nan=0.0)
+                    loss_state = ce + dice
+                    loss_dict["pixel_state_ce"] = ce.item()
+                    loss_dict["pixel_state_dice"] = dice.item()
+                else:
+                    loss_dict["pixel_state_ce"] = 0.0
+                    loss_dict["pixel_state_dice"] = 0.0
         loss_dict["loss_state"] = loss_state.item()
 
-        # === 3. Refinement Consistency Loss ===
+        # === 4. Refinement Consistency Loss (DISABLED: refinement is inference-only post-processing) ===
         loss_refine = _zero(device)
-        refine_loss = predictions.get("refine_consistency_loss")
-        if refine_loss is not None and isinstance(refine_loss, torch.Tensor) and refine_loss.requires_grad:
-            loss_refine = refine_loss
-            loss_dict["refine_consistency"] = refine_loss.item()
-        else:
-            loss_dict["refine_consistency"] = 0.0
+        loss_dict["refine_consistency"] = 0.0
 
-        # === 4. Contrastive Loss ===
+        # === 5. Contrastive Loss ===
         loss_contrastive = _zero(device)
         cl = predictions.get("contrastive_losses", {})
         if cl:

@@ -194,8 +194,8 @@ state_decode_map:
   64: 2
   65: 3
   66: 5
-  67: 6
-  68: 6
+  67: 3
+  68: 3
 
 # Class weights (inverse log frequency balancing)
 pixel_class_weights:
@@ -215,13 +215,13 @@ pixel_class_weights:
 - 5.470   # 13 Vessel (1.9M)
 - 1.800   # 14 Crater (584K)
 state_pixel_weights:
-- 1.0     # 0 no-change
-- 15.0    # 1 damaged
-- 20.0    # 2 reduced
-- 30.0    # 3 added
-- 25.0    # 4 extended
-- 20.0    # 5 replaced
-- 0.5     # 6 none
+- 0.2     # 0 no-change
+- 3.0     # 1 damaged
+- 4.0     # 2 reduced
+- 5.0     # 3 added
+- 5.0     # 4 extended
+- 4.0     # 5 replaced
+- 0.3     # 6 none
 branch_routing:
   instance:
   - Building
@@ -239,3 +239,9 @@ w_state_pixel: 2.0  # Boost state loss weight
 state_ignore_targets:
   - 0  # Farmland (always no-change, not informative)
 
+
+# Frequency branch configuration
+frequency_branch:
+  enabled: true
+  out_dim: 64
+  levels: 2  # Number of DWT decomposition levels

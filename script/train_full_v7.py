@@ -37,7 +37,7 @@ def parse_args():
     # Model
     parser.add_argument('--backbone', type=str, default='L1')
     parser.add_argument('--backbone_type', type=str, default='lwganet', choices=['lwganet', 'dinov3'], help='Backbone type: lwganet or dinov3')
-    parser.add_argument('--pretrained_weight_path', type=str, default='/mnt/f/mambacd/home/HICD_v7/weights/model.safetensors')
+    parser.add_argument('--pretrained_weight_path', type=str, default=None, help='Auto-selected based on backbone_type if not set')
     parser.add_argument('--hidden_dim', type=int, default=128)
     parser.add_argument('--embed_dim', type=int, default=64, help='Embedding dimension for label structure')
 
@@ -61,8 +61,7 @@ def parse_args():
     parser.add_argument('--state_pixel_weights', type=float, nargs=7, default=None,
                         help='Class weights for pixel state CE loss [nochange,damaged,reduced,added,extended,replaced,none]')
     parser.add_argument('--w_state_pixel', type=float, default=1.0)
-    parser.add_argument('--w_change', type=float, default=1.0)
-    parser.add_argument('--w_contrastive', type=float, default=0.5, help='Weight for contrastive label structure losses')
+    parser.add_argument('--w_contrastive', type=float, default=0.05, help='Weight for contrastive label structure losses')
 
     # Saving
     parser.add_argument('--save_dir', type=str, default='checkpoints')
@@ -135,7 +134,7 @@ class TrainerV7:
         if os.path.getsize(self.csv_path) == 0:
             pixel_names = self.dataset_config.get('pixel_target_names', ['class'+str(i) for i in range(20)])
             header = [
-                'epoch', 'train_loss', 'val_loss', 'target_miou', 'state_miou', 'sek', 'kappa_changed', 'kappa_unchanged',
+                'epoch', 'train_loss', 'val_loss', 'target_miou', 'state_miou', 'sek', 'kappa_changed', 'kappa_unchanged', 'ref_smiou', 'ref_sek',
             ] + ['iou_' + n.lower().replace(' ', '_') for n in pixel_names] + [
                 'pixel_ce', 'pixel_dice', 'pixel_state_ce', 'pixel_state_dice',
                 'loss_contrastive', 'lr', 'time_s'
@@ -167,7 +166,6 @@ class TrainerV7:
         cfg['active_heads'] = self.dataset_config.get('active_heads', {})
         cfg['pixel_class_weights'] = self.args.pixel_class_weights if self.args.pixel_class_weights is not None else self.dataset_config.get('pixel_class_weights', None)
         cfg['state_pixel_weights'] = self.args.state_pixel_weights if self.args.state_pixel_weights is not None else self.dataset_config.get('state_pixel_weights', None)
-        cfg['w_change'] = self.args.w_change
         cfg['w_contrastive'] = self.args.w_contrastive
         return cfg
 
@@ -188,7 +186,11 @@ class TrainerV7:
                     p.requires_grad = False
             else:
                 self.model.freeze_backbone()
+            # Phase 1: rare-class focused weights
+            if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'set_phase'):
+                self.model.loss_fn.set_phase(1)
 
+        t_start = time.time()
         for epoch in range(start_epoch, self.args.max_epochs):
             self.current_epoch = epoch
 
@@ -207,10 +209,18 @@ class TrainerV7:
                     print(f'Unfroze last {num_to_unfreeze} blocks + projection heads')
                 else:
                     self.model.unfreeze_backbone(self.args.unfreeze_ratio)
+                # Phase 2: restore normal weights
+                if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'set_phase'):
+                    self.model.loss_fn.set_phase(2, self.dataset_config)
             train_loss, train_dict = self.train_epoch(epoch)
 
             # Validate
             val_loss, val_results = self.validate(epoch)
+
+            # Update target mIoU for refinement warmup scheduling
+            current_tmiou = val_results.get('target_miou', 0)
+            if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'set_target_miou'):
+                self.model.loss_fn.set_target_miou(current_tmiou)
 
             # LR step
             self.scheduler.step()
@@ -224,6 +234,7 @@ class TrainerV7:
                 self.save_checkpoint(epoch, val_loss, is_best)
 
             # CSV
+            time_s = time.time() - t_start
             lr = self.optimizer.param_groups[0]['lr']
             num_classes = self.dataset_config.get('num_pixel_targets', 16)
             target_ious = val_results.get('target_iou', [0]*num_classes)
@@ -231,6 +242,7 @@ class TrainerV7:
                     epoch + 1, f'{train_loss:.4f}', f'{val_loss:.4f}',
                     f'{val_results.get("target_miou", 0):.4f}',
                     f'{val_results.get("state_miou", 0):.4f}', f'{val_results.get("sek", 0):.4f}', f'{val_results.get("kappa_changed", 0):.4f}', f'{val_results.get("kappa_unchanged", 0):.4f}',
+                    f'{val_results.get("ref_state_miou", 0):.4f}', f'{val_results.get("ref_sek", 0):.4f}',
             ]
             for i in range(num_classes):
                 row.append(f'{target_ious[i]:.4f}' if i < len(target_ious) else '0.0000')
@@ -240,7 +252,7 @@ class TrainerV7:
                     f'{train_dict.get("pixel_state_ce", 0):.4f}',
                     f'{train_dict.get("pixel_state_dice", 0):.4f}',
                     f'{train_dict.get("loss_contrastive", 0):.6f}',
-                    f'{lr:.6f}', ''
+                    f'{lr:.6f}', f'{time_s:.1f}'
             ])
             self.csv_writer.writerow(row)
             self.csv_file.flush()
@@ -248,7 +260,7 @@ class TrainerV7:
             print(f"Epoch {epoch+1}/{self.args.max_epochs} - "
                   f"Train: {train_loss:.4f} | Val: {val_loss:.4f} | "
                   f"tMIoU: {val_results.get('target_miou', 0):.4f} | "
-                  f"sMIoU: {val_results.get('state_miou', 0):.4f} | SeK: {val_results.get('sek', 0):.4f}")
+                  f"sMIoU: {val_results.get('state_miou', 0):.4f} | SeK: {val_results.get('sek', 0):.4f} | ref: {val_results.get('ref_state_miou', 0):.4f}/{val_results.get('ref_sek', 0):.4f}")
 
         print(f"\nTraining completed! Best loss: {self.best_loss:.4f}")
         self.csv_file.close()
@@ -434,6 +446,13 @@ class TrainerV7:
 
 def main():
     args = parse_args()
+    # Auto-resolve pretrained weight path based on backbone type
+    if args.pretrained_weight_path is None:
+        if args.backbone_type == 'dinov3':
+            args.pretrained_weight_path = '/mnt/f/mambacd/home/HICD_v7/weights/model.safetensors'
+        else:
+            args.pretrained_weight_path = '/mnt/f/mambacd/home/HICD_v7/backbone_weights/lwganet_l1.pth'
+        print(f'Auto-selected pretrained weights: {args.pretrained_weight_path}')
     trainer = TrainerV7(args)
     trainer.train()
 

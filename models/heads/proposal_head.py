@@ -39,33 +39,50 @@ class VotingRefinementModule(nn.Module):
             nn.Conv2d(num_states, num_states, 1),
         )
 
-    def forward(self, state_logits_pixel, proposals=None, target_logits=None):
+    def forward(self, state_logits_pixel, proposals=None, target_logits=None,
+                validity_matrix=None):
         """
         Args:
             state_logits_pixel: [B, num_states, H, W] pixel state predictions
             proposals: list of [N_i, 4] boxes (cx, cy, w, h normalized)
                       If None, extract from target_logits
             target_logits: [B, num_targets, H, W] for proposal extraction
+            validity_matrix: [num_targets, num_states] soft validity scores from GNN
 
         Returns:
             refined_state_logits: [B, num_states, H, W] refined pixel predictions
             consistency_loss: scalar, encourages refinement consistency
             proposals: proposals used
         """
-        B, S, H, W = state_logits_pixel.shape
+        # Detach inputs so gradients don't flow back to main model
+        state_logits_detached = state_logits_pixel.detach()
+        target_logits_detached = target_logits.detach() if target_logits is not None else None
+
+        B, S, H, W = state_logits_detached.shape
 
         # Extract proposals if not provided
-        if proposals is None and target_logits is not None:
-            proposals = self._extract_proposals(target_logits)
+        if proposals is None and target_logits_detached is not None:
+            proposals = self._extract_proposals(target_logits_detached)
+
+        # Apply GNN validity constraints if available
+        if validity_matrix is not None and target_logits_detached is not None:
+            # Get per-pixel valid state weights from GNN
+            target_pred = target_logits_detached.argmax(dim=1)  # [B, H, W]
+            validity_per_pixel = validity_matrix[target_pred]  # [B, H, W, num_states]
+            validity_per_pixel = validity_per_pixel.permute(0, 3, 1, 2)  # [B, num_states, H, W]
+            # Mask invalid states: add log(validity) to logits
+            state_logits_constrained = state_logits_detached + torch.log(validity_per_pixel + 1e-6)
+        else:
+            state_logits_constrained = state_logits_detached
 
         # Apply attention and refinement
-        attention_weights = self.attention(state_logits_pixel)
-        refined = self.refine_conv(state_logits_pixel * attention_weights)
-        refined_state_logits = state_logits_pixel + refined  # Residual connection
+        attention_weights = self.attention(state_logits_constrained)
+        refined = self.refine_conv(state_logits_constrained * attention_weights)
+        refined_state_logits = state_logits_constrained + refined  # Residual connection
 
         # Consistency loss: refined predictions within each proposal should be uniform
         consistency_loss = self._compute_consistency(
-            refined_state_logits, state_logits_pixel, proposals
+            refined_state_logits, state_logits_detached, proposals
         )
 
         return refined_state_logits, consistency_loss, proposals or []
@@ -106,7 +123,6 @@ class VotingRefinementModule(nn.Module):
     def _compute_consistency(self, refined, original, proposals):
         """
         Consistency loss: penalize variance of refined predictions within each proposal.
-        Encourages the module to produce uniform predictions for each object.
         """
         if not proposals or all(len(p) == 0 for p in proposals):
             return torch.tensor(0.0, device=refined.device, requires_grad=True)
@@ -126,8 +142,9 @@ class VotingRefinementModule(nn.Module):
                 if x2 <= x1 or y2 <= y1:
                     continue
                 roi_probs = probs[b_idx, :, y1:y2, x1:x2]  # [S, h, w]
-                # Variance of predictions within proposal (should be low)
+                
                 var = roi_probs.var(dim=[1, 2]).mean()
+                
                 total_loss = total_loss + var
                 count += 1
 

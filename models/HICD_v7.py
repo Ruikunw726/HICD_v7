@@ -14,12 +14,12 @@ from .backbone.dinov3 import DINOv3Backbone
 from .modules import (
     NeighborFeatureAggregation,
     MultiScaleTemporalFusion,
-    MultiScaleAdapter,
     LearnableStateEmbeddings,
-    LabelStructure,
+    GNNLabelStructure as LabelStructure,
     PixelStateHead,
 )
 from .heads.proposal_head import VotingRefinementModule
+from .modules.frequency_branch import FrequencyBranch
 from .losses import V7Loss
 
 
@@ -58,7 +58,6 @@ class HICD_v7(nn.Module):
         self.nfa_t1 = NeighborFeatureAggregation(in_channels=backbone_channels, out_channels=hidden_dim)
         self.nfa_t2 = NeighborFeatureAggregation(in_channels=backbone_channels, out_channels=hidden_dim)
         self.tfm = MultiScaleTemporalFusion(in_channels=[hidden_dim]*4, out_channels=[hidden_dim]*4)
-        self.semantic_adapter = MultiScaleAdapter(in_channels=[hidden_dim]*4, adapter_channels=hidden_dim//4)
 
         self.label_structure = LabelStructure(
             num_targets=num_pixel_targets, num_states=num_states, embed_dim=embed_dim,
@@ -68,7 +67,23 @@ class HICD_v7(nn.Module):
             num_targets=num_pixel_targets, num_states=num_states,
             in_channels=hidden_dim, embed_dim=embed_dim, hidden_dim=hidden_dim,
         )
-        # Interaction modules removed - handled by VotingRefinementModule
+        
+        # Frequency branch: independent frequency domain features for small class enhancement
+        freq_cfg = config.get('frequency_branch', {})
+        self.use_freq_branch = freq_cfg.get('enabled', False)
+        if self.use_freq_branch:
+            self.freq_branch = FrequencyBranch(
+                in_channels=3,
+                out_dim=freq_cfg.get('out_dim', 64),
+                levels=freq_cfg.get('levels', 2),
+            )
+            # Fusion layer: combine backbone features with frequency features
+            self.freq_fusion = nn.Sequential(
+                nn.Conv2d(hidden_dim + freq_cfg.get('out_dim', 64), hidden_dim, 1),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU(inplace=True),
+            )
+            print(f"FrequencyBranch enabled: out_dim={freq_cfg.get('out_dim', 64)}, levels={freq_cfg.get('levels', 2)}")
 
         config['num_pixel_targets'] = num_pixel_targets
         self.loss_fn = V7Loss(config)
@@ -83,19 +98,35 @@ class HICD_v7(nn.Module):
         nfa_t2 = self.nfa_t2(*feat_t2_list)
         fused_features, _, _ = self.tfm(nfa_t1, nfa_t2)
 
-        # Adapters
-        sem_features = self.semantic_adapter(fused_features)
+        # Frequency branch: enhance features with frequency domain information
+        if self.use_freq_branch:
+            # fused_features is a list of multi-scale features [P2, P3, P4, P5]
+            # Enhance the highest resolution feature (P2) with frequency features
+            p2_size = fused_features[0].shape[2:]  # (H/4, W/4)
+            freq_features = self.freq_branch(img_t1, img_t2, target_size=p2_size)
+            # Fuse with P2 features
+            enhanced_p2 = self.freq_fusion(torch.cat([fused_features[0], freq_features], dim=1))
+            fused_features = [enhanced_p2] + fused_features[1:]
 
-        # Pixel branch: target + state
+        # Branch B+C: Target + state classification
         target_logits, state_logits = self.semantic_head(
-            sem_features, label_structure=self.label_structure,
+            fused_features, label_structure=self.label_structure,
         )
 
-        # Instance branch: voting refinement on pixel predictions
-        refined_state_logits, refine_consistency, proposals = self.instance_head(
-            state_logits_pixel=state_logits,
-            target_logits=target_logits,
-        )
+        # Instance branch: voting refinement (inference-only post-processing)
+        validity_matrix = self.label_structure.get_validity_score()
+        if not self.training:
+            # Only run refinement during inference
+            refined_state_logits, refine_consistency, proposals = self.instance_head(
+                state_logits_pixel=state_logits,
+                target_logits=target_logits,
+                validity_matrix=validity_matrix.detach(),
+            )
+        else:
+            # During training, skip refinement to save memory
+            refined_state_logits = state_logits
+            refine_consistency = torch.tensor(0.0, device=state_logits.device, requires_grad=True)
+            proposals = []
 
         # Contrastive losses from label structure
         contrastive_losses = {}
@@ -109,10 +140,12 @@ class HICD_v7(nn.Module):
 
         predictions = {
             'target_logits': target_logits,
-            'state_logits': refined_state_logits,  # Use refined state
+            'state_logits': state_logits,  # Raw: for main state loss
+            'refined_state_logits': refined_state_logits,  # Refined: for eval
             'proposals': proposals,
             'refine_consistency_loss': refine_consistency,
             'contrastive_losses': contrastive_losses,
+            'validity_matrix': validity_matrix,
         }
         if targets is not None:
             loss, loss_dict = self.loss_fn(predictions, targets)
@@ -135,8 +168,6 @@ class HICD_v7(nn.Module):
             param_groups.append({'params': backbone_trainable, 'lr': lr*0.1, 'weight_decay': weight_decay, 'name': 'backbone'})
         ntfm_params = list(self.nfa_t1.parameters()) + list(self.nfa_t2.parameters()) + list(self.tfm.parameters())
         param_groups.append({'params': ntfm_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'nfa_tfm'})
-        adapter_params = list(self.semantic_adapter.parameters())
-        param_groups.append({'params': adapter_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'adapters'})
         param_groups.append({'params': list(self.instance_head.parameters()), 'lr': lr, 'weight_decay': weight_decay, 'name': 'instance_head'})
         label_params = list(self.label_structure.parameters())
         param_groups.append({'params': label_params, 'lr': lr*0.5, 'weight_decay': weight_decay, 'name': 'label_structure'})
