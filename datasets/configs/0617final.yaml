@@ -1,13 +1,13 @@
 dataset: 0617final
-description: HICD war-damage dataset with graph-structured label space (16 targets,
-  7 states)
+description: HICD war-damage dataset with graph-structured label space (14 targets
+  + background, 7 states)
 pre_suffix: _pre_war
 post_suffix: _post_war
 label_suffix: _target
 post_label_suffix: null
 image_ext: .tif
 label_ext: .tif
-num_pixel_targets: 15
+num_pixel_targets: 16
 pixel_target_names: &id001
 - Farmland
 - Runway
@@ -24,6 +24,7 @@ pixel_target_names: &id001
 - Aircraft
 - Vessel
 - Crater
+- Background
 num_states: 7
 state_names:
 - no-change
@@ -33,7 +34,7 @@ state_names:
 - extended
 - replaced
 - none
-num_targets: 15
+num_targets: 16
 target_names: *id001
 ignore_index: 255
 category_hierarchy:
@@ -57,7 +58,7 @@ category_hierarchy:
   Stateless Targets:
   - 15
 label_decode_map:
-  0: 255
+  0: 15
   1: 0
   2: 0
   3: 1
@@ -95,11 +96,11 @@ label_decode_map:
   35: 7
   36: 7
   37: 7
-  38: 8
-  39: 8
-  40: 8
-  41: 8
-  42: 8
+  38: 255
+  39: 255
+  40: 255
+  41: 255
+  42: 255
   43: 9
   44: 9
   45: 9
@@ -207,13 +208,14 @@ pixel_class_weights:
 - 1.104   # 5 Highway (9.4M)
 - 0.069   # 6 Building (159M)
 - 4.310   # 7 Shelter (241K)
-- 6.495   # 8 Tower (159K)
+- 0.000   # 8 Tower [IGNORED - mapped to 255]
 - 2.820   # 9 Pier (372K)
 - 1.562   # 10 Dock (670K)
 - 1.054   # 11 Tank (990K)
 - 7.220   # 12 Aircraft (584K)
 - 5.470   # 13 Vessel (1.9M)
 - 1.800   # 14 Crater (584K)
+- 0.050   # 15 Background (low weight to avoid dominating)
 state_pixel_weights:
 - 0.2     # 0 no-change
 - 3.0     # 1 damaged
@@ -221,7 +223,7 @@ state_pixel_weights:
 - 5.0     # 3 added
 - 5.0     # 4 extended
 - 4.0     # 5 replaced
-- 0.3     # 6 none
+- 0.0     # 6 none (background, ignored in loss)
 branch_routing:
   instance:
   - Building
@@ -238,6 +240,7 @@ test_split: test
 w_state_pixel: 2.0  # Boost state loss weight
 state_ignore_targets:
   - 0  # Farmland (always no-change, not informative)
+  # Tower removed - now mapped to 255 (ignore)
 
 
 # Frequency branch configuration

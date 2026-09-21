@@ -62,6 +62,9 @@ def parse_args():
                         help='Class weights for pixel state CE loss [nochange,damaged,reduced,added,extended,replaced,none]')
     parser.add_argument('--w_state_pixel', type=float, default=1.0)
     parser.add_argument('--w_contrastive', type=float, default=0.05, help='Weight for contrastive label structure losses')
+    parser.add_argument('--state_aware', action='store_true', help='Enable state-aware sampling for rare state classes')
+    parser.add_argument('--rare_class_oversample', action='store_true', help='Oversample rare classes (Bridge/Dock/Shelter)')
+    parser.add_argument('--rare_class_boost', type=float, default=50.0, help='Weight boost for rare class samples')
 
     # Saving
     parser.add_argument('--save_dir', type=str, default='checkpoints')
@@ -90,6 +93,7 @@ class TrainerV7:
         # Build model
         model_config = self._build_model_config()
         self.model = build_hicd_v7(model_config).to(self.device)
+
         self._print_model_summary()
 
         # Dataloaders
@@ -98,7 +102,10 @@ class TrainerV7:
             data_dir=args.data_dir, config=self.dataset_config,
             split='train', batch_size=args.batch_size,
             num_workers=args.num_workers, scenes=scenes,
-            img_size=args.img_size, boxes_dir=args.boxes_dir
+            img_size=args.img_size, boxes_dir=args.boxes_dir,
+            state_aware=args.state_aware,
+            rare_class_oversample=args.rare_class_oversample,
+            rare_class_boost=args.rare_class_boost
         )
         self.val_loader = create_dataloader(
             data_dir=args.data_dir, config=self.dataset_config,
@@ -132,12 +139,21 @@ class TrainerV7:
         self.csv_file = open(self.csv_path, 'a', newline='')
         self.csv_writer = csv.writer(self.csv_file)
         if os.path.getsize(self.csv_path) == 0:
-            pixel_names = self.dataset_config.get('pixel_target_names', ['class'+str(i) for i in range(20)])
+            pixel_names = self.dataset_config.get('pixel_target_names', [])
             header = [
-                'epoch', 'train_loss', 'val_loss', 'target_miou', 'state_miou', 'sek', 'kappa_changed', 'kappa_unchanged', 'ref_smiou', 'ref_sek',
-            ] + ['iou_' + n.lower().replace(' ', '_') for n in pixel_names] + [
+                'epoch', 'train_loss', 'val_loss',
+                # BDD Protocol (main metrics)
+                'F_loc', 'F_clf', 'F_overall', 'F_macro',
+                # Four-task F1
+                'T1_f1', 'T1_sek', 'T2_f1', 'T2_sek',
+                'T3_f1', 'T3_sek', 'T4_f1', 'T4_sek',
+                'bdd_f1', 'bdd_sek',
+                # Per-class F1
+            ] + [f'f1_{n.lower().replace(" ", "_")}' for n in pixel_names] + [
+                # Loss breakdown
                 'pixel_ce', 'pixel_dice', 'pixel_state_ce', 'pixel_state_dice',
-                'loss_contrastive', 'lr', 'time_s'
+                'bg_suppress', 'loss_contrastive',
+                'lr', 'time_s',
             ]
             self.csv_writer.writerow(header)
 
@@ -155,7 +171,7 @@ class TrainerV7:
         cfg = dict(self.dataset_config)
         cfg['backbone'] = {
             'type': self.args.backbone_type,
-            'variant': self.args.backbone,
+            'variant': self.args.backbone if self.args.backbone_type != 'dinov3' else 'dinov3_base',
             'pretrained': True,
             'pretrained_path': self.args.pretrained_weight_path,
         }
@@ -177,8 +193,8 @@ class TrainerV7:
     def train(self):
         start_epoch = self.current_epoch
 
-        # Stage 1: Freeze backbone
-        if self.args.freeze_backbone_epochs > 0:
+        # Stage 1: Freeze backbone (only if starting from scratch)
+        if self.args.freeze_backbone_epochs > 0 and start_epoch < self.args.freeze_backbone_epochs:
             print(f"\nStage 1: Freezing backbone for {self.args.freeze_backbone_epochs} epochs")
             if self.args.backbone_type == 'dinov3':
                 print('DINOv3: early blocks already frozen, freezing remaining trainable blocks')
@@ -189,10 +205,15 @@ class TrainerV7:
             # Phase 1: rare-class focused weights
             if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'set_phase'):
                 self.model.loss_fn.set_phase(1)
+        elif start_epoch >= self.args.freeze_backbone_epochs:
+            print(f"\nResuming after freeze phase (start_epoch={start_epoch}), backbone already unfrozen")
+            if hasattr(self.model, 'loss_fn') and hasattr(self.model.loss_fn, 'set_phase'):
+                self.model.loss_fn.set_phase(2, self.dataset_config)
 
         t_start = time.time()
         for epoch in range(start_epoch, self.args.max_epochs):
             self.current_epoch = epoch
+            self.model.config['_current_epoch'] = epoch
 
             # Unfreeze
             if epoch == self.args.freeze_backbone_epochs:
@@ -236,31 +257,49 @@ class TrainerV7:
             # CSV
             time_s = time.time() - t_start
             lr = self.optimizer.param_groups[0]['lr']
-            num_classes = self.dataset_config.get('num_pixel_targets', 16)
-            target_ious = val_results.get('target_iou', [0]*num_classes)
             row = [
-                    epoch + 1, f'{train_loss:.4f}', f'{val_loss:.4f}',
-                    f'{val_results.get("target_miou", 0):.4f}',
-                    f'{val_results.get("state_miou", 0):.4f}', f'{val_results.get("sek", 0):.4f}', f'{val_results.get("kappa_changed", 0):.4f}', f'{val_results.get("kappa_unchanged", 0):.4f}',
-                    f'{val_results.get("ref_state_miou", 0):.4f}', f'{val_results.get("ref_sek", 0):.4f}',
+                epoch + 1, f'{train_loss:.4f}', f'{val_loss:.4f}',
+                # BDD Protocol
+                f'{val_results.get("F_loc", 0):.4f}',
+                f'{val_results.get("F_clf", 0):.4f}',
+                f'{val_results.get("F_overall", 0):.4f}',
+                f'{val_results.get("F_macro", 0):.4f}',
+                # Four-task F1
+                f'{val_results.get("T1_Building_f1", 0):.4f}',
+                f'{val_results.get("T1_Building_sek", 0):.4f}',
+                f'{val_results.get("T2_Surface_f1", 0):.4f}',
+                f'{val_results.get("T2_Surface_sek", 0):.4f}',
+                f'{val_results.get("T3_Mobile_f1", 0):.4f}',
+                f'{val_results.get("T3_Mobile_sek", 0):.4f}',
+                f'{val_results.get("T4_Facility_f1", 0):.4f}',
+                f'{val_results.get("T4_Facility_sek", 0):.4f}',
+                f'{val_results.get("bdd_f1", 0):.4f}',
+                f'{val_results.get("bdd_sek", 0):.4f}',
             ]
-            for i in range(num_classes):
-                row.append(f'{target_ious[i]:.4f}' if i < len(target_ious) else '0.0000')
+            # Per-class F1
+            pixel_names = self.dataset_config.get('pixel_target_names', [])
+            for name in pixel_names:
+                name_lower = name.lower().replace(' ', '_')
+                row.append(f'{val_results.get(f"prf_{name_lower}_f1", 0):.4f}')
+            # Loss
             row.extend([
-                    f'{train_dict.get("pixel_ce", 0):.4f}',
-                    f'{train_dict.get("pixel_dice", 0):.4f}',
-                    f'{train_dict.get("pixel_state_ce", 0):.4f}',
-                    f'{train_dict.get("pixel_state_dice", 0):.4f}',
-                    f'{train_dict.get("loss_contrastive", 0):.6f}',
-                    f'{lr:.6f}', f'{time_s:.1f}'
+                f'{train_dict.get("pixel_ce", 0):.4f}',
+                f'{train_dict.get("pixel_dice", 0):.4f}',
+                f'{train_dict.get("pixel_state_ce", 0):.4f}',
+                f'{train_dict.get("pixel_state_dice", 0):.4f}',
+                f'{train_dict.get("bg_suppress", 0):.4f}',
+                f'{train_dict.get("loss_contrastive", 0):.6f}',
+                f'{lr:.6f}', f'{time_s:.1f}'
             ])
             self.csv_writer.writerow(row)
             self.csv_file.flush()
 
             print(f"Epoch {epoch+1}/{self.args.max_epochs} - "
-                  f"Train: {train_loss:.4f} | Val: {val_loss:.4f} | "
-                  f"tMIoU: {val_results.get('target_miou', 0):.4f} | "
-                  f"sMIoU: {val_results.get('state_miou', 0):.4f} | SeK: {val_results.get('sek', 0):.4f} | ref: {val_results.get('ref_state_miou', 0):.4f}/{val_results.get('ref_sek', 0):.4f}")
+                  f"Loss: {train_loss:.4f}/{val_loss:.4f} | "
+                  f"F_overall: {val_results.get('F_overall', 0):.4f} | "
+                  f"F_loc: {val_results.get('F_loc', 0):.4f} | "
+                  f"F_clf: {val_results.get('F_clf', 0):.4f} | "
+                  f"SeK: {val_results.get('bdd_sek', 0):.4f}")
 
         print(f"\nTraining completed! Best loss: {self.best_loss:.4f}")
         self.csv_file.close()
@@ -389,7 +428,7 @@ class TrainerV7:
     def _load_checkpoint(self, path):
         print(f"Resuming from {path}")
         ckpt = torch.load(path, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.model.load_state_dict(ckpt['model_state_dict'], strict=False)
         self.optimizer.load_state_dict(ckpt['optimizer_state_dict'])
         self.scheduler.load_state_dict(ckpt['scheduler_state_dict'])
         self.current_epoch = ckpt['epoch'] + 1

@@ -27,15 +27,15 @@ from itertools import product
 #   Mobile Targets: [13,14]  Stateless Targets: [15,16]
 
 TARGET_NAMES = [
-    'background', 'farmland', 'runway', 'taxiway', 'apron',
-    'bridge', 'highway', 'building', 'shelter', 'tower',
-    'pier', 'dock', 'tank', 'aircraft', 'vessel', 'crater',
+    'Farmland', 'Runway', 'Taxiway', 'Apron', 'Bridge', 'Highway',
+    'Building', 'Shelter', 'Tower', 'Pier', 'Dock', 'Tank',
+    'Aircraft', 'Vessel', 'Crater', 'Background',
 ]
 
 TARGET_NAMES_ZH = [
-    '背景', '农田', '跑道', '滑行道', '停机坪',
-    '桥梁', '主要公路', '建筑物', '飞机掩体', '塔台',
-    '栈桥', '船坞', '大型罐体', '飞机', '舰船', '弹坑',
+    '农田', '跑道', '滑行道', '停机坪', '桥梁', '主要公路',
+    '建筑物', '飞机掩体', '塔台', '栈桥', '船坞', '大型罐体',
+    '飞机', '舰船', '弹坑', '背景',
 ]
 
 STATE_NAMES = ['no-change', 'damaged', 'reduced', 'added', 'extended', 'replaced', 'none']
@@ -50,7 +50,7 @@ CATEGORY_HIERARCHY = {
 # Valid (target, state) pairs derived from classes.csv
 # Each tuple is (target_id, state_id)
 VALID_COMBINATIONS = [
-        (0, 0),   # farmland: nochange (damaged merged into no-change, visible damage indistinguishable)
+        (0, 0), (0, 2),  # farmland: no-change, reduced
     (1, 0), (1, 1), (1, 2), (1, 3), (1, 4),  # runway: nochange, damaged, reduced, added, extended
     (2, 0), (2, 1), (2, 2), (2, 3), (2, 4),  # taxiway
     (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),  # apron
@@ -58,13 +58,14 @@ VALID_COMBINATIONS = [
     (5, 0), (5, 1), (5, 2), (5, 3), (5, 4),  # highway
     (6, 0), (6, 1), (6, 2), (6, 3), (6, 4),  # building
     (7, 0), (7, 1), (7, 2), (7, 3), (7, 4),  # shelter
-    (8, 0), (8, 1), (8, 2), (8, 3), (8, 4),  # tower
+    # Tower (8) removed - mapped to ignore
     (9, 0), (9, 1), (9, 2), (9, 3), (9, 4),  # pier
     (10, 0), (10, 1), (10, 2), (10, 3), (10, 4),  # dock
     (11, 0), (11, 1), (11, 2), (11, 3),  # tank (no extended)
     (12, 0), (12, 1), (12, 2), (12, 3), (12, 5),  # aircraft: no extended, has replaced
     (13, 0), (13, 1), (13, 2), (13, 3), (13, 5),  # vessel: no extended, has replaced
-    (14, 6),  # crater: stateless (none only)
+    (14, 3),  # crater: added (originally stateless, relabeled to added)
+    (15, 6),  # background: only 'none' state
 ]
 
 # Which states are valid for each target (sorted)
@@ -74,7 +75,7 @@ for tid, sid in VALID_COMBINATIONS:
         TARGET_VALID_STATES[tid] = []
     TARGET_VALID_STATES[tid].append(sid)
 
-NUM_TARGETS = 15
+NUM_TARGETS = 16  # 14 real targets + Tower(ignored) + Background
 NUM_STATES = 7
 
 
@@ -168,28 +169,19 @@ class LabelStructure(nn.Module):
     
     def mask_invalid_logits(self, target_logits, state_logits):
         """
-        Zero out invalid (target, state) combinations.
-        
-        Args:
-            target_logits: [B, num_targets, H, W]
-            state_logits: [B, num_states, H, W]
-        Returns:
-            state_logits_masked: [B, num_states, H, W] with invalid logits set to -inf
-            validity: [num_targets, num_states] soft validity
+        Soft validity weighting (replaces hard -inf masking).
+
+        Instead of setting invalid state logits to -inf (which kills gradients
+        when target predictions are wrong early in training), apply a soft
+        multiplicative weight with a floor of 0.1 so gradients always flow.
         """
-        # Get per-pixel validity from target prediction
         target_probs = F.softmax(target_logits, dim=1)  # [B, T, H, W]
-        validity = self.get_validity_score()  # [T, S]
-        
-        # Weighted validity: sum over targets of (target_prob * validity[target, :])
-        # This gives per-pixel valid state distribution [B, S, H, W]
+        validity = self.get_validity_score()  # [T, S] in [0, 1]
         weighted_validity = torch.einsum('bthw,ts->bshw', target_probs, validity)
-        
-        # Mask: states with very low validity get penalized
-        mask = (weighted_validity < 0.01).float()
-        state_logits_masked = state_logits.masked_fill(mask.bool(), float('-inf'))
-        
-        return state_logits_masked, validity
+        # Soft floor: min 0.1 so even invalid states get gradient signal
+        soft_weight = 0.1 + 0.9 * weighted_validity
+        state_logits_weighted = state_logits * soft_weight
+        return state_logits_weighted, validity
     
     def compute_contrastive_losses(self, target_logits, state_logits, target_gt, state_gt):
         """
@@ -367,9 +359,14 @@ class HierarchicalConditionDecoder(nn.Module):
         state_bias = torch.einsum('bthw,ts->bshw', target_probs, self.target_state_bias)
         state_logits = state_logits_raw + state_bias
         
-        # Apply validity masking if label_structure is provided
+        # GNN soft validity mask: suppress invalid states softly.
+        # Valid combos get weight ~1.0, invalid get weight ~0.1 (preserves gradient).
         if label_structure is not None:
-            state_logits = label_structure.mask_invalid_logits(target_logits, state_logits)[0]
+            validity = label_structure.get_validity_score()  # [T, S] soft scores
+            target_probs = F.softmax(target_logits.detach(), dim=1)  # [B, T, H, W]
+            soft_weight = torch.einsum('bthw,ts->bshw', target_probs, validity)
+            soft_weight = 0.1 + 0.9 * soft_weight  # min 0.1 keeps gradient alive
+            state_logits = state_logits * soft_weight
         
         return state_logits, features
 
@@ -464,3 +461,225 @@ class PixelStateHead(nn.Module):
 
 
 
+
+
+
+class GNNLabelStructure(nn.Module):
+    """
+    GNN-based label space structure module.
+
+    Replaces static embeddings + manual contrastive losses with graph
+    convolutions that naturally encode target-state validity, category
+    hierarchy, and state grouping in a single differentiable pass.
+
+    Graph topology (22 nodes total):
+      - 15 target nodes (indices 0..14)
+      -  7 state  nodes (indices 15..21)
+      - Edges: target-state bipartite (valid combos),
+               target-target (same category),
+               state-state  (same group)
+
+    Args:
+        num_targets: 15
+        num_states:  7
+        embed_dim:   node embedding dimension (default 64)
+        num_gnn_layers: message-passing depth (default 2)
+    """
+
+    def __init__(self, num_targets=NUM_TARGETS, num_states=NUM_STATES,
+                 embed_dim=64, num_gnn_layers=2):
+        super().__init__()
+        self.num_targets = num_targets
+        self.num_states = num_states
+        self.embed_dim = embed_dim
+        self.num_nodes = num_targets + num_states  # 22
+
+        # --- Build adjacency (dense, registered as buffer) ---
+        adj = self._build_adjacency(num_targets, num_states)
+        self.register_buffer('adj', adj)  # [22, 22]
+
+        # --- Node feature initialised from learnable embeddings ---
+        self.node_embeddings = nn.Embedding(self.num_nodes, embed_dim)
+        nn.init.xavier_uniform_(self.node_embeddings.weight)
+
+        # --- GNN layers: Graph Attention with residual ---
+        self.gnn_layers = nn.ModuleList()
+        self.gnn_norms = nn.ModuleList()
+        for _ in range(num_gnn_layers):
+            self.gnn_layers.append(
+                GATLayer(embed_dim, num_heads=4, residual=True)
+            )
+            self.gnn_norms.append(nn.LayerNorm(embed_dim))
+
+        # --- Validity predictor on (target, state) pair embeddings ---
+        self.validity_mlp = nn.Sequential(
+            nn.Linear(embed_dim * 2, embed_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(embed_dim, 1),
+        )
+
+        # --- HierarchicalConditionDecoder compatibility ---
+        # Provide the same interface as the old LabelStructure
+        self.target_state_bias = nn.Parameter(torch.zeros(num_targets, num_states))
+
+        # Validity mask buffer (hard, for masking)
+        validity = build_validity_matrix(num_targets, num_states)
+        self.register_buffer('validity_mask', validity)
+
+    # ---- graph construction ----
+
+    @staticmethod
+    def _build_adjacency(num_targets, num_states):
+        """Build [N, N] symmetric adjacency for the heterogeneous label graph."""
+        N = num_targets + num_states
+        adj = torch.zeros(N, N)
+
+        # 1) target-state bipartite edges (valid combinations)
+        for tid, sid in VALID_COMBINATIONS:
+            adj[tid, num_targets + sid] = 1.0
+            adj[num_targets + sid, tid] = 1.0
+
+        # 2) target-target: same category
+        for cat_list in CATEGORY_HIERARCHY.values():
+            for i in cat_list:
+                for j in cat_list:
+                    if i != j:
+                        adj[i, j] = 1.0
+
+        # 3) state-state: same group
+        state_groups = [[0], [1, 2], [3, 4], [5], [6]]  # nochange, decrease, increase, replaced, none
+        for grp in state_groups:
+            for si in grp:
+                for sj in grp:
+                    if si != sj:
+                        adj[num_targets + si, num_targets + sj] = 1.0
+
+        # Add self-loops
+        adj += torch.eye(N)
+        return adj
+
+    # ---- forward ----
+
+    def forward(self):
+        """
+        Run GNN message passing and return refined embeddings.
+
+        Returns:
+            target_emb: [num_targets, embed_dim]
+            state_emb:  [num_states,  embed_dim]
+        """
+        x = self.node_embeddings.weight  # [22, D]
+
+        for gnn, norm in zip(self.gnn_layers, self.gnn_norms):
+            x_new = gnn(x, self.adj)
+            x = norm(x + x_new)  # residual + layer norm
+
+        target_emb = x[:self.num_targets]
+        state_emb = x[self.num_targets:]
+        return target_emb, state_emb
+
+    def get_validity_score(self):
+        """
+        Predict soft validity [num_targets, num_states] from GNN embeddings.
+        Falls back to hard mask * sigmoid(logits) for compatibility.
+        """
+        target_emb, state_emb = self.forward()
+        # Pairwise MLP
+        t = target_emb.unsqueeze(1).expand(-1, self.num_states, -1)  # [T, S, D]
+        s = state_emb.unsqueeze(0).expand(self.num_targets, -1, -1)  # [T, S, D]
+        pair = torch.cat([t, s], dim=-1)  # [T, S, 2D]
+        validity = torch.sigmoid(self.validity_mlp(pair).squeeze(-1))  # [T, S]
+        return validity
+
+    def mask_invalid_logits(self, target_logits, state_logits):
+        """Soft validity weighting (same interface as old LabelStructure)."""
+        target_probs = F.softmax(target_logits, dim=1)
+        validity = self.get_validity_score()
+        weighted_validity = torch.einsum('bthw,ts->bshw', target_probs, validity)
+        soft_weight = 0.1 + 0.9 * weighted_validity
+        state_logits_weighted = state_logits * soft_weight
+        return state_logits_weighted, validity
+
+    def compute_contrastive_losses(self, target_logits, state_logits, target_gt, state_gt):
+        """
+        GNN version: the graph structure is learned through message passing,
+        so we only need a lightweight supervision signal on the validity predictor.
+        No more manual contrastive losses.
+        """
+        losses = {}
+        # Supervise validity: BCE with hard GT mask
+        validity = self.get_validity_score()
+        # BCE with logits: use raw MLP output before sigmoid
+        target_emb, state_emb = self.forward()
+        t = target_emb.unsqueeze(1).expand(-1, self.num_states, -1)
+        s = state_emb.unsqueeze(0).expand(self.num_targets, -1, -1)
+        pair = torch.cat([t, s], dim=-1)
+        raw_logits = self.validity_mlp(pair).squeeze(-1)
+        losses['validity_supervision'] = F.binary_cross_entropy_with_logits(
+            raw_logits, self.validity_mask,
+            pos_weight=torch.tensor([5.0], device=raw_logits.device)
+        )
+        return losses
+
+    def get_target_state_embeddings(self):
+        target_emb, state_emb = self.forward()
+        return {
+            'target_embeddings': target_emb.detach().cpu(),
+            'state_embeddings': state_emb.detach().cpu(),
+            'validity_matrix': self.get_validity_score().detach().cpu(),
+        }
+
+
+class GATLayer(nn.Module):
+    """
+    Graph Attention Layer (Velic'kovic et al. 2018) with residual support.
+
+    Operates on a dense adjacency matrix (small graph, N=22).
+    """
+
+    def __init__(self, embed_dim, num_heads=4, residual=True):
+        super().__init__()
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        assert embed_dim % num_heads == 0
+        self.residual = residual
+
+        self.W = nn.Linear(embed_dim, embed_dim, bias=False)
+        self.a_src = nn.Parameter(torch.zeros(num_heads, self.head_dim))
+        self.a_dst = nn.Parameter(torch.zeros(num_heads, self.head_dim))
+        nn.init.xavier_uniform_(self.a_src.unsqueeze(0))
+        nn.init.xavier_uniform_(self.a_dst.unsqueeze(0))
+        self.leaky_relu = nn.LeakyReLU(0.2)
+        self.out_proj = nn.Linear(embed_dim, embed_dim, bias=False)
+
+    def forward(self, x, adj):
+        """
+        Args:
+            x:   [N, D] node features
+            adj: [N, N] adjacency (0/1, with self-loops)
+        Returns:
+            [N, D] updated node features
+        """
+        N, D = x.shape
+        h = self.W(x).view(N, self.num_heads, self.head_dim)  # [N, H, d]
+
+        # Attention scores: e_ij = LeakyReLU(a_src . h_i + a_dst . h_j)
+        e_src = (h * self.a_src).sum(dim=-1)  # [N, H]
+        e_dst = (h * self.a_dst).sum(dim=-1)  # [N, H]
+        e = e_src.unsqueeze(1) + e_dst.unsqueeze(0)  # [N, N, H]
+        e = self.leaky_relu(e)
+
+        # Mask non-edges
+        mask = (adj == 0).unsqueeze(-1)  # [N, N, 1]
+        e = e.masked_fill(mask, float('-inf'))
+
+        # Softmax over neighbours
+        alpha = F.softmax(e, dim=1)  # [N, N, H]
+        alpha = alpha.masked_fill(mask, 0.0)
+
+        # Aggregate
+        h_expanded = h.unsqueeze(0).expand(N, -1, -1, -1)  # [N_src, N_dst, H, d]
+        out = (alpha.unsqueeze(-1) * h_expanded).sum(dim=1)  # [N, H, d]
+        out = out.reshape(N, D)
+        out = self.out_proj(out)
+        return out

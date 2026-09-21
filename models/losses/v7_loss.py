@@ -72,6 +72,49 @@ class FocalLoss(nn.Module):
         return focal_loss
 
 
+class BackgroundSuppressionLoss(nn.Module):
+    """
+    Penalize predicting foreground on background pixels.
+    Directly addresses the false positive problem.
+    """
+    def __init__(self, bg_class=15, fg_threshold=0.5):
+        super().__init__()
+        self.bg_class = bg_class
+        self.fg_threshold = fg_threshold
+
+    def forward(self, target_logits, target_gt):
+        """
+        target_logits: [B, num_classes, H, W]
+        target_gt: [B, H, W] with bg_class for background
+        """
+        # Background mask
+        bg_mask = (target_gt == self.bg_class)
+        if bg_mask.sum() == 0:
+            return torch.tensor(0.0, device=target_logits.device)
+
+        # Get foreground probability for background pixels
+        # fg_prob = 1 - P(background)
+        probs = F.softmax(target_logits, dim=1)
+        bg_prob = probs[:, self.bg_class]  # [B, H, W]
+        fg_prob = 1.0 - bg_prob
+
+        # Only penalize background pixels predicted as foreground
+        bg_fg_prob = fg_prob[bg_mask]  # [N_bg]
+
+        # Binary cross entropy: encourage bg_prob → 1
+        # Loss = -log(bg_prob) for background pixels
+        bg_loss = -torch.log(bg_prob[bg_mask] + 1e-8)
+
+        # Focus on hard negatives (high fg_prob)
+        hard_mask = bg_fg_prob > self.fg_threshold
+        if hard_mask.sum() > 0:
+            # Extra weight for hard negatives
+            hard_weight = 2.0
+            bg_loss = bg_loss * (1.0 + hard_weight * hard_mask.float())
+
+        return bg_loss.mean()
+
+
 class AdaptiveClassWeighter:
     """
     Adaptive class weights based on running IoU.
@@ -90,6 +133,8 @@ class AdaptiveClassWeighter:
 
     def update(self, per_class_iou):
         """Update weights based on per-class IoU from validation."""
+        # Save zero-weight mask before update
+        zero_mask = (self.weights == 0)
         new_iou = torch.tensor(per_class_iou, dtype=torch.float32)
         self.running_iou = self.momentum * self.running_iou + (1 - self.momentum) * new_iou
         # Inverse IoU weighting: low IoU -> high weight
@@ -98,6 +143,8 @@ class AdaptiveClassWeighter:
         inv_iou = inv_iou / inv_iou.mean()
         # Clip to reasonable range
         inv_iou = inv_iou.clamp(self.min_weight, self.max_weight)
+        # Preserve zero-weight classes (e.g., Tower, Farmland)
+        inv_iou[zero_mask] = 0.0
         self.weights = inv_iou
 
     def get_weights(self):
@@ -128,6 +175,8 @@ class V7Loss(nn.Module):
         self.pixel_dice = DiceLoss(ignore_index=ignore_idx)
         self.state_ce = nn.CrossEntropyLoss(ignore_index=ignore_idx, label_smoothing=0.05)
         self.state_dice = DiceLoss(ignore_index=ignore_idx)
+        self.bg_suppression = BackgroundSuppressionLoss(bg_class=15, fg_threshold=0.5)
+        self.w_bg_suppress = config.get("w_bg_suppress", 0.5)
 
         # State adaptive weighter (with initial weights from config)
         num_states = config.get("num_states", 7)
@@ -143,6 +192,8 @@ class V7Loss(nn.Module):
         self.refine_warmup_miou = config.get("refine_warmup_miou", 0.5)
         self.current_target_miou = 0.0  # Updated each epoch
         self.w_contrastive = config.get("w_contrastive", 0.5)
+        self._state_ignore_targets = config.get("state_ignore_targets", [])
+
 
     def update_adaptive_weights(self, per_class_iou, per_state_iou=None):
         """Call this from training loop after each validation epoch."""
@@ -167,7 +218,12 @@ class V7Loss(nn.Module):
             else:
                 pw = None
                 sw = None
-            print("[Phase 2] Normal class weights restored")
+            # Reset running_iou so adaptive weighter starts fresh in Phase 2
+            # Phase 1 locked nochange/none at 0; their running_iou stayed at 0
+            # which causes momentum-based adaptive weights to remain near 0
+            self.adaptive_weighter.running_iou = torch.zeros(self.adaptive_weighter.num_classes)
+            self.state_weighter.running_iou = torch.zeros(self.state_weighter.num_classes)
+            print("[Phase 2] Normal class weights restored, running_iou reset")
         if pw is not None:
             self.adaptive_weighter.weights = torch.tensor(pw, dtype=torch.float32)
         if sw is not None:
@@ -188,6 +244,7 @@ class V7Loss(nn.Module):
 
         # === 1. Pixel Target Loss ===
         loss_pixel = _zero(device)
+        loss_bg_suppress = _zero(device)
         if "target_logits" in predictions and "target_gt" in targets:
             target_logits = predictions["target_logits"]
             if target_logits.shape[0] > 0:
@@ -195,9 +252,12 @@ class V7Loss(nn.Module):
                 target_for_loss[targets["target_gt"] == 255] = 255
                 ce = self.pixel_ce(target_logits, target_for_loss)
                 dice = self.pixel_dice(target_logits, target_for_loss)
-                loss_pixel = ce + 2.0 * dice
+                # Background suppression loss
+                bg_sup = self.bg_suppression(target_logits, target_for_loss)
+                loss_pixel = ce + 2.0 * dice + self.w_bg_suppress * bg_sup
                 loss_dict["pixel_ce"] = ce.item()
                 loss_dict["pixel_dice"] = dice.item()
+                loss_dict["bg_suppress"] = bg_sup.item()
         loss_dict["loss_pixel"] = loss_pixel.item()
 
         # === 2. Dynamic State Loss (target-conditioned validity) ===
@@ -211,6 +271,9 @@ class V7Loss(nn.Module):
                 # Ignore state 6 (none) - only background uses this after crater relabeling
                 state_gt_raw_tmp = targets["state_gt"].clamp(0, state_logits.shape[1] - 1)
                 valid_mask = valid_mask & (state_gt_raw_tmp != 6)
+                # Ignore specific targets from state loss (e.g., Farmland, Tower)
+                for ign_cls in self._state_ignore_targets:
+                    valid_mask = valid_mask & (target_gt != ign_cls)
                 # Dynamic validity: per-pixel mask based on (target, state) graph
                 # Get validity matrix from label_structure via predictions
                 validity = predictions.get("validity_matrix")

@@ -42,50 +42,85 @@ class VotingRefinementModule(nn.Module):
     def forward(self, state_logits_pixel, proposals=None, target_logits=None,
                 validity_matrix=None):
         """
+        Majority voting refinement: within each connected component proposal,
+        replace all state predictions with the majority vote.
+        
+        No learnable parameters - pure post-processing.
+        
         Args:
             state_logits_pixel: [B, num_states, H, W] pixel state predictions
-            proposals: list of [N_i, 4] boxes (cx, cy, w, h normalized)
-                      If None, extract from target_logits
+            proposals: list of [N_i, 4] boxes (cx, cy, w, h normalized) - unused, kept for API
             target_logits: [B, num_targets, H, W] for proposal extraction
-            validity_matrix: [num_targets, num_states] soft validity scores from GNN
-
+            validity_matrix: [num_targets, num_states] soft validity scores from GNN - unused
+        
         Returns:
             refined_state_logits: [B, num_states, H, W] refined pixel predictions
-            consistency_loss: scalar, encourages refinement consistency
+            consistency_loss: scalar (always 0, no learning)
             proposals: proposals used
         """
-        # Detach inputs so gradients don't flow back to main model
-        state_logits_detached = state_logits_pixel.detach()
-        target_logits_detached = target_logits.detach() if target_logits is not None else None
-
-        B, S, H, W = state_logits_detached.shape
-
-        # Extract proposals if not provided
-        if proposals is None and target_logits_detached is not None:
-            proposals = self._extract_proposals(target_logits_detached)
-
-        # Apply GNN validity constraints if available
-        if validity_matrix is not None and target_logits_detached is not None:
-            # Get per-pixel valid state weights from GNN
-            target_pred = target_logits_detached.argmax(dim=1)  # [B, H, W]
-            validity_per_pixel = validity_matrix[target_pred]  # [B, H, W, num_states]
-            validity_per_pixel = validity_per_pixel.permute(0, 3, 1, 2)  # [B, num_states, H, W]
-            # Mask invalid states: add log(validity) to logits
-            state_logits_constrained = state_logits_detached + torch.log(validity_per_pixel + 1e-6)
+        B, S, H, W = state_logits_pixel.shape
+        device = state_logits_pixel.device
+        
+        # Get target predictions for connected components
+        if target_logits is not None:
+            target_pred = target_logits.argmax(dim=1)  # [B, H, W]
         else:
-            state_logits_constrained = state_logits_detached
-
-        # Apply attention and refinement
-        attention_weights = self.attention(state_logits_constrained)
-        refined = self.refine_conv(state_logits_constrained * attention_weights)
-        refined_state_logits = state_logits_constrained + refined  # Residual connection
-
-        # Consistency loss: refined predictions within each proposal should be uniform
-        consistency_loss = self._compute_consistency(
-            refined_state_logits, state_logits_detached, proposals
-        )
-
-        return refined_state_logits, consistency_loss, proposals or []
+            # If no target logits, return unchanged
+            return state_logits_pixel, torch.tensor(0.0, device=device, requires_grad=True), []
+        
+        # Get state predictions
+        state_pred = state_logits_pixel.argmax(dim=1)  # [B, H, W]
+        
+        # Apply majority voting within each connected component
+        refined_state = state_pred.clone()
+        
+        for b in range(B):
+            target_np = target_pred[b].cpu().numpy()
+            state_np = state_pred[b].cpu().numpy()
+            
+            # Process each target class (skip background=0)
+            for cls_id in range(1, target_logits.shape[1]):
+                mask = (target_np == cls_id).astype(np.uint8)
+                if mask.sum() < 10:  # min area
+                    continue
+                
+                # Get connected components
+                labeled, nf = ndimage.label(mask)
+                for comp_id in range(1, nf + 1):
+                    comp_mask = (labeled == comp_id)
+                    if comp_mask.sum() < 10:
+                        continue
+                    
+                    # Get state predictions within this component
+                    comp_states = state_np[comp_mask]
+                    
+                    # Majority vote (exclude no-change=0 if there are changed pixels)
+                    unique, counts = np.unique(comp_states, return_counts=True)
+                    
+                    # If there are changed pixels, prefer changed states
+                    changed_mask = (comp_states > 0) & (comp_states != 6)
+                    if changed_mask.sum() > 0:
+                        # Use majority of changed states
+                        changed_states = comp_states[changed_mask]
+                        unique_c, counts_c = np.unique(changed_states, return_counts=True)
+                        majority_state = unique_c[np.argmax(counts_c)]
+                    else:
+                        # All no-change, keep as is
+                        majority_state = unique[np.argmax(counts)]
+                    
+                    # Apply majority vote to entire component
+                    refined_state_np = refined_state[b].cpu().numpy()
+                    refined_state_np[comp_mask] = majority_state
+                    refined_state[b] = torch.from_numpy(refined_state_np).to(device)
+        
+        # Convert back to one-hot logits (hard assignment)
+        refined_state_logits = torch.zeros_like(state_logits_pixel)
+        refined_state_logits.scatter_(1, refined_state.unsqueeze(1), 1.0)
+        
+        # No consistency loss (no learning)
+        consistency_loss = torch.tensor(0.0, device=device, requires_grad=True)
+        
+        return refined_state_logits, consistency_loss, []
 
     def _extract_proposals(self, target_logits, min_area=50):
         """Extract proposals from target predictions (connected components per class)."""

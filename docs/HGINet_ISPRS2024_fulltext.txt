@@ -1,0 +1,1904 @@
+\n\n===== PAGE 1 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+Available online 20 April 2024
+0924-2716/© 2024 International Society for Photogrammetry and Remote Sensing, Inc. (ISPRS). Published by Elsevier B.V. All rights reserved.
+Semantic change detection using a hierarchical semantic graph interaction 
+network from high-resolution remote sensing images 
+Jiang Long
+a
+, Mengmeng Li
+a , *
+, Xiaoqin Wang
+a
+, Alfred Stein
+b 
+a
+Key Lab of Spatial Data Mining & Information Sharing of Ministry of Education, Academy of Digital China (Fujian), Fuzhou University, 350108 Fuzhou, China 
+b
+Faculty of Geo-Information Science and Earth Observation (ITC), University of Twente, Enschede, The Netherlands   
+ARTICLE INFO  
+Keywords: 
+Semantic change detection 
+Hierarchical semantic graph interaction 
+network 
+High-resolution remote sensing images 
+Temporal correlations 
+Semantic difference interaction 
+ABSTRACT  
+Current semantic change detection (SCD) methods face challenges in modeling temporal correlations (TCs) 
+between bitemporal semantic features and difference features. These methods lead to inaccurate detection re -
+sults, particularly for complex SCD scenarios. This paper presents a hierarchical semantic graph interaction 
+network (HGINet) for SCD from high-resolution remote sensing images. This multitask neural network combines 
+semantic segmentation and change detection tasks. For semantic segmentation, we construct a multilevel 
+perceptual aggregation network with a pyramidal architecture. It extracts semantic features that discriminate 
+between different categories at multiple levels. We model the correlations between bitemporal semantic features 
+using a TC module that enhances the identification of unchanged areas. For change detection, we design a se -
+mantic difference interaction module based on a graph convolutional network. It measures the interactions 
+among bitemporal semantic features, their corresponding difference features, and the combination of both. 
+Extensive experiments on four datasets, namely SECOND, HRSCD, Fuzhou, and Xiamen, show that HGINet 
+performs better in identifying changed areas and categories across various scenarios and regions than nine 
+existing methods. Compared with the existing methods applied on the four datasets, it achieves the highest F 1
+scd 
+values of 59.48%, 64.12%, 64.45%, and 84.93%, and SeK values of 19.34%, 14.55%, 18.28%, and 51.12%, 
+respectively. Moreover, HGINet mitigates the influence of fake changes caused by seasonal effects, producing 
+results with well-delineated boundaries and shapes. Furthermore, HGINet trained on the Fuzhou dataset is 
+successfully transferred to the Xiamen dataset, demonstrating its effectiveness and robustness in identifying 
+changed areas and categories from high-resolution remote sensing images. The code of our paper is accessible at 
+https://github.com/long123524/HGINet-torch .   
+1. Introduction 
+Change detection plays a crucial role in urban construction, urban 
+planning, and environmental monitoring, providing essential informa -
+tion on changes in land use and land cover for policy-making ( Lunetta 
+et al., 2006; Huang et al., 2017 ). Conventional change detection 
+methods mainly depend on time-consuming and labor-intensive field 
+surveying and visual interpretation of high-resolution remote sensing 
+images. With the advancement of remote sensing technologies, access to 
+numerous images has increased, promoting the demand for automati -
+cally identifying land changes from these images ( Daudt et al., 2018; 
+Zheng et al., 2021; Shu et al., 2022; Mei et al., 2023 ). 
+Many studies have focused on binary change detection (BCD) tasks to 
+identify changed areas from bitemporal images ( Peng et al., 2019 ; Chen 
+et al., 2021a ; Li et al., 2023b . Moreover, semantic change detection 
+(SCD) simultaneously detects changed areas and identifies the changed 
+categories, providing “ from – to ” change information ( Yang et al., 2021; 
+Zhao et al., 2022; Niu et al., 2023 ). Conventional SCD methods primarily 
+compare post-classification results of bitemporal images at the pixel 
+level to identify changed areas and categories ( Afrasinei et al., 2017; Wu 
+et al., 2017; Yan et al., 2019 ). In addition to pixel-based methods, object- 
+based methods have been used to detect changes in high-resolution 
+images, demonstrating their effectiveness in reducing high-frequency 
+pixel noise and extracting diverse object features ( Wang et al., 2018; 
+Lv et al., 2020 ; Liu et al., 2021a ). However, object-based methods 
+depend on deriving well-segmented objects, which poses challenges in 
+complex urban areas where poor segmentation can increase the un -
+certainties of detecting changed areas. Nowadays, deep learning based 
+* Corresponding author. 
+E-mail addresses: mli@fzu.edu.cn (M. Li), wangxq@fzu.edu.cn (X. Wang), a.stein@utwente.nl (A. Stein).  
+Contents lists available at ScienceDirect 
+ISPRS Journal of Photogrammetry and Remote Sensing 
+journal homepage: www.else vier.com/loc ate/isprsjprs 
+https://doi.org/10.1016/j.isprsjprs.2024.04.012 
+Received 19 July 2023; Received in revised form 6 March 2024; Accepted 12 April 2024   \n\n===== PAGE 2 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+319
+on convolutional neural networks (CNNs) has gained popularity in 
+remote sensing image processing, achieving outstanding performance 
+compared to conventional methods owing to its robust feature extrac -
+tion capabilities ( Sun et al., 2020 ; Chen et al., 2022a,b ; Shu et al., 2022 ). 
+Deep learning methods for SCD generally fall into three architec -
+tures: single-branch, dual-branch, and multitask ( Tian et al., 2022 ). 
+Typically, single-branch methods directly feed the difference or 
+concatenation maps of bitemporal images into a CNN to extract deep 
+features regarding changed objects ( Daudt et al., 2018 ). Such methods 
+consider each potential change type as an independent class label and 
+treat SCD as a straightforward semantic segmentation task ( Ding et al., 
+2022 ). The number of changed categories equals the square of the 
+number of semantic segmentation classes, causing considerable class 
+imbalance. Convolutional dual-branch methods first classify bitemporal 
+remote sensing images separately and then identify the changed cate -
+gories by comparing the two classification results ( Daudt et al., 2019 ). 
+The detection accuracy of these methods highly depends on the separate 
+classification results. Furthermore, detection errors may accumulate 
+from the two separate classification results, particularly in areas close to 
+the object boundaries. Multitask learning architectures, which combine 
+semantic segmentation and BCD branches, have led to more advanced 
+methods that simultaneously achieve land cover classification and BCD 
+( Ding et al., 2022; Xia et al., 2022; Zhao et al., 2022; Zheng et al., 2022 ). 
+Thus, multiple related tasks, such as semantic segmentation and change 
+detection, can be learned together through a feature-sharing scheme 
+that enhances feature extraction and increases the accuracy of SCD. 
+Recent studies have demonstrated that multitask learning architec -
+tures are better suited for SCD than others. They have attracted 
+considerable interest in urban SCD studies ( Yang et al., 2021; Tian et al., 
+2022 ). Yang et al., (2021) developed an asymmetric Siamese network 
+with a triple-branch architecture to separately perform semantic seg -
+mentation and BCD tasks. Shen et al., (2022) proposed a feature- 
+constrained multitask Siamese network for SCD from high-resolution 
+remote sensing images. Xia et al., (2022) constructed a deep Siamese 
+post-classification fusion network (PCFN) to decompose SCD into 
+bitemporal semantic segmentation and BCD tasks. Thus, semantic rep -
+resentations are constrained using change representations during 
+training. 
+It is challenging to accurately identify the changed categories while 
+locating the changed areas, particularly in complex SCD scenarios. Most 
+existing studies have used CNN-based feature extractors to obtain dif -
+ferences in bitemporal semantic features ( Daudt et al., 2019; Ding et al., 
+2022; Xia et al., 2022 ), often overlooking the interactions among 
+different feature layers. Due to the locality of convolution operations, 
+CNNs are limited in capturing long-distance context information, i.e., 
+the surrounding information far from target objects. This limitation 
+often results in coarse and imprecise segmentation. Moreover, CNNs are 
+inadequate in modeling interactions among different feature layers from 
+a global perspective, leading to imprecise detection, particularly in 
+complex areas with diverse objects. Graph convolutional networks 
+(GCNs) are powerful for learning the relationships among nonstructured 
+data. They effectively model global interactions among different feature 
+layers through structural learning ( Te et al., 2020 ; Chen et al., 2021c ; 
+Wang et al., 2022a ). Bitemporal semantic features derived from un -
+changed areas also exhibit high intrasimilarity but low interdissimilarity 
+for changed areas. Existing multitask architectures based on triple- 
+branch networks ( Daudt et al., 2019; Yang et al., 2021 ) model sub -
+tasks that extract semantic features without considering the temporal 
+correlations (TCs) among bitemporal semantic features, thus causing 
+imprecise predictions for unchanged areas. 
+This study aims to develop an effective multitask network for SCD 
+from high-resolution remote sensing images. It presents a hierarchical 
+semantic graph interaction network (i.e., HGINet) to simultaneously 
+improve the identification of changed areas and categories. Initially, an 
+effective multilevel feature extractor is designed to enhance the repre -
+sentation of bitemporal semantic features. Subsequently, the 
+interactions between different feature layers of the extracted features 
+and the extracted difference features are quantified by graph learning, 
+demonstrating an improvement in the detection ability for complex SCD 
+scenarios. Finally, this study focuses on enhancing the correlations 
+among bitemporal semantic features for unchanged areas. The contri -
+butions of this study are as follows:  
+1) It proposes an effective and robust method for detecting semantic 
+changes in various settings using high-resolution remote sensing 
+images.  
+2) It designs a lightweight semantic difference interaction (SDI) module 
+using graph learning to characterize the interactions among different 
+feature layers, thereby improving the detection capability of HGINet 
+for complex SCD scenarios.  
+3) It introduces a TC module using a cross-learning method to enhance 
+the identification of unchanged areas.  
+4) It develops a multilevel perceptual aggregation network (MPANet) 
+based on pyramid architecture to improve semantic representations 
+of ground objects with various characteristics. 
+The remainder of this paper is organized as follows: Section 2 illus -
+trates the details of the proposed method, Section 3 describes the SCD 
+datasets used, and Section 4 presents the experimental results and 
+analysis. Section 5 discusses these findings, followed by the conclusions 
+in Section 6 . 
+2. Methods 
+Fig. 1 shows the workflow of the proposed method (i.e., HGINet) for 
+SCD from high-resolution remote sensing images. HGINet employs a 
+multitask network architecture to jointly learn category and change 
+information through semantic segmentation and change detection tasks. 
+This approach constrains the learning of semantic category information 
+by locating changed areas, thereby simultaneously improving the 
+identification of changed areas and categories. For semantic segmenta -
+tion, we present a feature extractor based on an MPANet with a pyra -
+midal structure. This extracts and fuses semantic features at different 
+levels from bitemporal remote sensing images to obtain a robust se -
+mantic representation of ground objects. 
+To enhance the identification of unchanged areas, we model the TCs 
+of extracted semantic features between bitemporal images through a 
+cross-learning method, a learning method that shares and transfers 
+knowledge between different but related tasks or domains ( Cervi ˜no 
+et al., 2021 ). The difference features of the bitemporal images are then 
+derived for the change detection task. Moreover, we augment the 
+modeling of TCs by quantifying the interactions of different feature 
+layers within the extracted bitemporal semantic features, their corre -
+sponding difference features, and within both by employing graph 
+learning. This enhances the representation of changed areas and cate -
+gories from a global perspective, thus improving SCD for complex 
+scenarios. 
+2.1. Feature extractor by Siamese multilevel perceptual aggregation 
+network 
+Fig. 2 shows the architecture of the proposed MPANet feature 
+extractor for extracting semantic features of ground objects with fine- 
+grained spatial details. Due to the variability in shapes, sizes, and 
+colors, ground objects often exhibit high intraclass dissimilarity and 
+interclass similarity. Multiscale contextual information aids in identi -
+fying ground objects of various shapes and sizes, particularly those with 
+similar spectral and textural features. Here, we utilize a pyramid vision 
+transformer, specifically PVT-V2 ( Fig. 2 a), pretrained on the ImageNet 
+dataset ( Wang et al., 2022b ), as the backbone network of MPANet. 
+Unlike the popular Swin transformer ( Liu et al., 2021b ), PVT-V2 uses a 
+pyramid architecture with spatial-reduction attention modules to 
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 3 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+320
+extract multilevel image features, while reducing computational cost. 
+Let F
+l
+∈ R
+H × W × C 
+( l ∈ 1 , 2 , 3 , 4) be the multilevel features derived from 
+PVT-v2, where H , W , and C represent the number of heights, widths, and 
+channels, respectively. F
+1 
+contains fine-grained spatial information of 
+the extracted objects, while F
+2
+, F
+3
+, and F
+4 
+provide high-level semantic 
+cues that aid in recognizing complex objects. In general, a higher level 
+corresponds to richer semantic information. We enhance the high-level 
+features (i.e., F
+2
+, F
+3 
+and F
+4
+) using a multiscale context fusion (MSCF) 
+module ( Fig. 2 b) that fuses context information from both near- and 
+long-distance perspectives ( Fig. 2 c). Prior studies indicate that 
+enhancing long-distance context information is unnecessary for low- 
+level features such as image edges, which may cause feature redun -
+dancy ( Jiao et al., 2023 ). Therefore, low-level features (i.e., F
+1
+) are 
+processed only by a near-distance module, i.e., the convolutional block 
+attention module (CBAM), to highlight the relevant spatial information 
+of target objects ( Woo et al., 2018 ). Although high-level features (i.e., 
+F
+2
+, F
+3 
+and F
+4
+) contain more robust global semantics (e.g., overall pro -
+files), they lack local semantics (e.g., edges and textures) compared to 
+low-level features (i.e., F
+1
+). Therefore, we develop a semantic feature 
+spatial refinement (SFSR) module ( Fig. 2 d) to integrate these multilevel 
+semantic features, thereby deriving a refined high-level feature map 
+with fine-grained spatial details. 
+2.1.1. Multiscale context fusion module 
+For the high-level semantic features, we fuse their long- and near- 
+distance contexts using the MSCF module. This module employs two 
+different attention operations, i.e., the long-distance attention module 
+(LAM) ( Fig. 2 c) and CBAM ( Woo et al., 2018 ), to model long- and near- 
+distance contexts, respectively: 
+F
+C
+l
+= δ
+3 × 3
+( Cat ( I
+LAM
+( F
+l
+) , I
+CBAM
+( F
+l
+))) (1)  
+where F
+l 
+( l = 2 , 3 , 4) denotes high-level semantic features, and F
+C
+l 
+in -
+dicates the fused semantic feature. Cat and δ
+3 × 3 
+denote the concatena -
+tion operation and a 3 × 3 convolutional layer, respectively. I
+LAM 
+and 
+I
+CBAM 
+denote the LAM and CBAM operations, respectively. The CBAM 
+comprises channel and spatial attention modules for enhancing the 
+spatial information of ground objects ( Woo et al., 2018 ). 
+Traditional convolution operators generally capture semantic fea -
+tures within a limited square window, which inadequately extracts long- 
+distance context information, thus failing to accurately identify large 
+objects with complex shapes. Herein, we introduce a LAM module that 
+uses four strip convolution blocks ( Fig. 2 c) that encode context infor -
+mation in the horizontal, vertical, left diagonal, and right diagonal di -
+rections. This improves the identification of complex objects with 
+various shapes, particularly strip-like objects such as roads, rivers, and 
+industrial buildings ( Mei et al., 2021 ). Let w ∈ R
+2 k + 1 
+be a strip convo -
+lution filter of size 2 k + 1, and D = ( D
+m
+, D
+n
+) be the set of the above filter 
+directions corresponding to (0, 1), (1, 0), (1, 1), and (   1, 1). The strip 
+convolution results R
+D 
+of the input features x
+i , j
+∈ F
+l 
+are defined as 
+follows: 
+R
+D
+ 
+x
+i , j
+)
+= ( F
+l
+× w )
+D
+ 
+x
+i , j
+)
+=
+∑
+k
+  k
+x
+i   D m k , j   D n k
+• w ( 2 k ) (2)  
+where k = 4 based on Mei et al., (2021) to maintain the same number of 
+parameters as the 3 × 3 convolution filter. 
+2.1.2. Semantic feature spatial refinement module 
+To refine the extracted high-level semantic features with fine- 
+grained spatial details, we develop an SFSR module ( Fig. 2 d). Let F
+C
+M 
+represent the concatenated high-level semantic features (i.e., F
+C
+2
+, F
+C
+3
+, and 
+F
+C
+4
+), and F
+C
+1 
+represent the low-level semantic features that contain fine- 
+grained spatial details ( Fig. 2 a). We then obtain the refined semantic 
+features 
+̂
+F
+T
+i 
+( i = 1 , 2) for bitemporal images as follows: 
+̂
+F
+T i
+= δ
+3 × 3
+ 
+δ
+3 × 3
+ 
+F
+C
+M
+)
++ Sof tmax
+ 
+F
+C
+1
+)
+× δ
+3 × 3
+ 
+F
+C
+M
+))
+(3)  
+where the SoftMax function is used to normalize the feature map F
+C
+1 
+to 
+obtain the attention weight. 
+2.2. Bitemporal correlation modeling using cross-learning method 
+Existing studies indicate that using temporally correlated informa -
+tion among bitemporal images contributes to the identification of un -
+changed areas ( Ding et al., 2022 ). Inspired by Ding et al., (2022) , we 
+design a TC module ( Fig. 3 ) using a cross-learning strategy to model TCs 
+of extracted features between bitemporal images. Traditional CNN op -
+erators usually have a small receptive field and fail to model correlations 
+within a global context. To overcome this limitation, we exploit nonlocal 
+networks with a large receptive field to model global correlations ( Nam 
+et al., 2017; Zhang et al., 2020 ). This improves the representation of 
+bitemporal semantic features of unchanged areas to maintain high 
+similarity, enhancing the correlations between areas with similar se -
+mantic features. 
+First, we project bitemporal semantic features 
+̂
+F
+T
+1
+∊ R
+C × H × W 
+(resp. 
+̂
+F
+T
+2
+) derived from MPANet into three 2D tensors: Query ( Q
+i
+∊ R
+H × W , C / r
+), 
+Key ( K
+i
+∊ R
+C / r , H × W
+), and Value ( V
+i
+∊ R
+C / r , H × W 
+( i ∈ { 1 , 2 } )), where r is a 
+channel downsampling factor, typically set to 2. For each temporal 
+Fig. 1. Workflow of the proposed HGINet for semantic change detection. It comprises three components: (a) a feature extractor based on a Siamese multilevel 
+perceptual aggregation network (MPANet) for extracting semantic features from bitemporal images; (b) a temporal correlation (TC) module for modeling correlations 
+between extracted bitemporal semantic features; and (c) a semantic difference interaction (SDI) module to enhance the interactions of different feature layers. SS
+1 
+and SS
+2 
+represent the semantic segmentation maps of bitemporal images. 
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 4 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+321
+feature, we compute a similarity matrix S
+i 
+among the bitemporal se -
+mantic features: 
+S
+1
+= Sof tmax
+ 
+P
+avg
+( Q
+1
+) × K
+2
+)
+(4)  
+S
+2
+= Sof tmax
+ 
+P
+avg
+( Q
+2
+) × K
+1
+)
+(5)  
+where P
+avg 
+denotes adaptive average pooling to derive global semantic 
+information. We then obtain the enhanced feature map e
+̂
+F
+T 1 
+(resp. e
+̂
+F
+T 2
+) 
+that accounts for bi-TCs: 
+e
+̂
+F
+T
+1
+=
+̂
+F
+T
+1
++ δ
+1 × 1
+( V
+1
+× S
+1
+) (6)  
+e
+̂
+F
+T
+2
+=
+̂
+F
+T
+2
++ δ
+1 × 1
+( V
+2
+× S
+2
+) (7)  
+where δ
+1 × 1 
+is a 1 × 1 convolutional layer. By doing so, the features of the 
+unchanged areas are further enhanced. 
+2.3. Characterization of interactions of different feature layers by graph 
+learning 
+Previous studies have indicated that incorporating the information of 
+semantic categories into the change detection task can reduce false 
+changes caused by image viewing and phenology differences, thereby 
+improving the detection of changed areas ( Zhao et al., 2022; Zheng 
+et al., 2022 ). These studies typically concatenate bitemporal semantic 
+features with their difference features to generate a high-dimensional 
+feature map. This map is subsequently input into a small CNN for 
+change detection ( Cui and Jiang, 2023; Ding et al., 2022; Xia et al., 
+2022 ). However, this approach overlooks the interactions between 
+bitemporal semantic features, their corresponding difference features, 
+and both. This study introduces an SDI module ( Fig. 4 (a)) based on GCNs 
+to characterize the interactions among different feature layers. GCNs 
+have proven effective in learning interactions between nonstructured 
+Fig. 2. Architecture of the proposed MPANet feature extractor comprising (a) a pyramid vision transformer (PVT-V2), (b) multiscale context fusion (MSCF) modules, 
+(c) long-distance attention modules (LAM), and (d) semantic feature spatial refinement (SFSR) module. Blue and black lines indicate low-level and high-level se -
+mantic features, respectively. (For interpretation of the references to colour in this figure legend, the reader is referred to the web version of this article.) 
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 5 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+322
+data and have been successfully applied to various computer vision tasks 
+( Li and Gupta, 2018; Chen et al., 2019; Te et al., 2020 ). First, we 
+represent the bitemporal semantic features and their corresponding 
+difference features in a graph space. Let X ∈ R
+H × W × 3 C 
+be the feature map 
+concatenating bitemporal semantic features and their difference fea -
+tures ( Fig. 4 (a)). X is then project into a 2D tensor, i.e., X ∈ R
+N × 3 C
+, with 
+N = H × W represents the number of features. We define a graph G = ( V ,
+E , A ) with a node set V , an edge set E , and an adjacency matrix A . A 
+graph node v
+i
+∈ V , i = 1 ⋯ N , indicates an image feature layer of length 
+N , while a graph edge e ∈ E models the interrelations between different 
+feature layers within a predefined neighborhood. For the adjacency 
+matrix A ∈ R
+N × N
+, A
+ij
+= 1 if nodes i and j are adjacent in a specific 
+neighborhood, otherwise, A
+ij
+= 0. The neighborhood is a 1D tensor of 
+size 1 × 3 C , concatenating feature layers of e
+̂
+F
+T 1 
+semantic features, e
+̂
+F
+T 2 
+semantic features, and their difference features ( Fig. 4 (b)). Here, we 
+define three different neighborhoods, labeled as the 1st, 2nd, and full 
+order neighborhoods. For node v
+i
+, the 1st order neighborhood contains 
+image layers [ i   1 , i , i + 1 ] ( Fig. 4 (b)). Likewise, the 2nd order neigh -
+borhood contains image layers [ i   2 , i   1 , i , i + 1 , i + 2 ] . The full order 
+neighborhood indicates that each node is adjacent to all others. The 
+HGINet, utilizing these neighborhoods, develops three different ap -
+proaches HGINet
+1st
+, HGINet
+2nd
+, and HGINet, which use the three 
+neighborhood systems. Subsequently, we employ a GCN ( Kipf and 
+Welling, 2016; Te et al., 2020 ) to quantify the interactions between 
+different feature layers. Let h
+l
+i 
+be the feature vector of the learned hidden 
+representations for node v
+i 
+at the l th GCN layer, and H
+l 
+be the feature 
+matrix of graph node V . The l th GCN layer is expressed as follows: 
+H
+( l )
+= σ
+(
+̃
+D
+ 
+1
+2
+̃
+A
+̃
+D
+ 
+1
+2
+H
+( l   1 )
+W
+( l   1 )
+)
+(8)  
+where W
+l   1 
+represents a learned weight matrix, 
+̃
+A = A + I ( I is the identify 
+matrix); 
+̃
+D =
+∑
+j
+̃
+A
+ij
+, H
+( l )
+is derived from H
+( l   1 )
+in a stepwise manner, with 
+H
+( 0 )
+= X ; and σ is the ReLU function. We utilize a two-layer GCN to learn 
+global interactions among feature layers ( Kipf and Welling, 2016 ), 
+deriving a new feature map Z
+g 
+for features X , i.e., Z
+g
+= H
+( 1 )
+( X ) . 
+We also consider the importance of each channel in the input feature 
+X by integrating it with Z
+g
+. In particular, we apply a multilayer 
+perception (MLP) and an adaptive max-pooling operation P
+max 
+to 
+determine the channel-specific weight for Z
+g 
+based on X : 
+Fig. 3. Architecture of the proposed temporal correlation (TC) module for 
+modeling the temporal correlations of semantic feature maps 
+̂
+F
+T 1 
+and 
+̂
+F
+T 2 
+derived from MPANet. It generates two enhanced features e
+̂
+F
+T 1 
+and e
+̂
+F
+T 2 
+through an attention mechanism operating on Query, Key, and Value. Conv and 
+Avg-pooling represent convolution and adaptive average pooling operations. 
+Fig. 4. Structure of the proposed SDI module (a) and (b) neighborhood relations of different methods (i.e., HGINet
+1st
+, HGINet
+2nd
+, and HGINet). A GCN is employed to 
+characterize the interactions between different feature layers e
+̂
+F
+T 1
+, e
+̂
+F
+T 2
+, and their different features to improve inaccurate semantic changes. 
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 6 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+323
+̂
+Z = ϑ
+ 
+MLP ( P
+max
+( X )) × Z
+g
+(9)  
+where ϑ is a sigmoid function. This method allows us to fully leverage 
+the importance of each feature layer and their interaction information 
+for change detection. 
+2.4. Multitask loss functions 
+For the semantic segmentation task, we apply a multi-class cross- 
+entropy loss. Let y
+i 
+be the vector of a ground-truth image, and ̂y
+i 
+be the 
+predicted probability of the i th class, respectively. We obtain the se -
+mantic segmentation loss L
+s , i 
+( i ∈ { 1 , 2 } ) of bi-temporal semantic fea -
+tures by: 
+L
+s , i
+=  
+1
+N
+∑
+N
+i = 1
+y
+i
+log ( ̂y
+i
+) (10)  
+where N indicates the number of detection categories. 
+For the change detection task, we use a weighted binary cross- 
+entropy (WBCE) loss to handle the class imbalance between changed 
+and unchanged areas. Let y
+c
+∈ { 0 , 1 } be the ground-truth label of the 
+changed areas, and ̂y
+c 
+be the predicted probability of these areas. The 
+binary change loss L
+c 
+is defined as: 
+L
+c
+=  
+1
+N
+∑
+N
+i = 1
+W × y
+c
+log ( ̂y
+c
+) + ( 1   W ) × ( 1   y
+c
+) log ( 1   ̂y
+c
+) (11)  
+where N is the number of image pixels, and W indicates the weight of 
+changed and unchanged classes with W = 0 . 25 according to Ding et al., 
+(2022) . 
+Moreover, we introduce a semantic change loss L
+sc 
+based upon 
+contrastive learning methods, to penalize dissimilar features in un -
+changed areas and similar features in changed areas ( Ding et al., 2022 ). 
+Specifically, the L
+sc 
+is computed from two semantic segmentation results 
+SS
+1 
+and S S
+2 
+via a cosine loss function: 
+L
+sc
+=
+{
+1   cos ( x
+1
+, x
+2
+) , y
+c
+= 0
+max ( 0 , cos ( x
+1
+, x
+2
+)) , y
+c
+= 1
+(12)  
+where x
+1 
+and x
+2 
+refer to the pixel vectors of these two semantic seg -
+mentation results, respectively. 
+In this way, we obtain the total loss L
+t 
+by combining L
+c
+, L
+s , i
+, and L
+sc 
+losses ( Ding et al., 2022 ): 
+L
+t
+= 0 . 5 ×
+ 
+L
+s , 1
++ L
+s , 2
+)
++ L
+c
++ L
+sc
+(13)  
+where L
+s , 1 
+and L
+s , 2 
+denote the semantic segmentation losses of bi- 
+temporal images. 
+2.5. Change detection performance evaluation 
+We compare our method with nine existing methods for BCD and 
+SCD: BIT ( Chen et al., 2021a ), GAS-Net ( Zhang et al., 2023 ), HRSCD-3 
+( Daudt et al., 2019 ), HRSCD-4 ( Daudt et al., 2019 ), FCCDN ( Chen 
+et al., 2022a ), SSCDl ( Ding et al., 2022 ), Bi-SRNet ( Ding et al., 2022 ), 
+PCFN ( Xia et al., 2022 ), and MTSCD-Net ( Cui and Jiang, 2023 ). The 
+selection of these methods is based on the following criteria: 
+BIT ( Chen et al., 2021a ) is a lightweight BCD model that combines 
+CNN using a transformer to extract deep semantic features. It can also be 
+applied to SCD. 
+GAS-Net ( Zhang et al., 2023 ) is a state-of-the-art (SOTA) dual-branch 
+model for BCD from high-resolution images. It integrates the correla -
+tions between foreground and background areas to capture global-aware 
+semantic cues, improving detection accuracy for various ground sce -
+narios. GAS-Net can also be extended to SCD. 
+HRSCD-3 ( Daudt et al., 2019 ) is a standard triple-branch network 
+based on a multitask architecture for SCD, which introduces an extra 
+change detection branch as a feature extractor to identify changed areas. 
+It serves as a baseline for SCD comparison using multitask architectures. 
+HRSCD-4 ( Daudt et al., 2019 ) improves semantic communication 
+between change detection and segmentation tasks in HRSCD-3 by add -
+ing an extra skip connection layer on Siamese CNNs. This is an advanced 
+version of HRSCD-3 that is suitable for SCD comparison. 
+FCCDN ( Chen et al., 2022a ) employs an encoder – decoder network 
+with a triple-branch architecture based on feature constraint modules to 
+enhance the detection capability of changed areas and categories. It 
+achieved satisfactory results on various change detection datasets. 
+SSCDl ( Ding et al., 2022 ) uses two Siamese CNN encoders as feature 
+extractors, followed by a change detection network to identify changed 
+areas. Compared to traditional triple-branch architectures ( Daudt et al., 
+2019 ) that model different tasks individually, SSCDl learns more se -
+mantic category information from bitemporal semantic features, 
+improving SCD results. 
+Bi-SRNet ( Ding et al., 2022 ) is a multitask convolutional network 
+based on SSCDl. It considers TCs among bitemporal semantic features 
+and serves as a SOTA method for SCD on the SECOND dataset. 
+PCFN ( Xia et al., 2022 ) is a multitask model for SCD. It uses a Siamese 
+classification network to extract multilevel semantic features and stacks 
+these features for input into a soft fusion network, surpassing several 
+traditional post-classification methods. 
+MTSCD-Net ( Cui and Jiang, 2023 ) is a recent robust model based on 
+multitask architecture for SCD. It enhances task correlations through a 
+spatial enhancement module based on location priors, demonstrating 
+superior detection results in various SCD scenarios. 
+2.6. Accuracy assessment 
+We use four accuracy assessment measures, i.e., mean intersection 
+over union (mIoU), separated kappa (SeK), F 1
+scd
+, and overall score (OS), 
+to assess the effectiveness of our proposed method ( Yang et al., 2021; 
+Ding et al., 2022; Cui and Jiang, 2023 ). Suppose S = { S
+ij
+} is a confusion 
+matrix, where S
+ij 
+is the number of pixels with label i classified into class j , 
+i , j ∈ { 0 , 1 , ⋯ , N   1 } (class 0 indicates the unchanged class), where N is 
+the number of object categories including unchanged ones. We use the 
+mIoU measure to evaluate the changed and unchanged areas in BCD 
+results. Let IoU
+nc 
+and IoU
+c 
+be the intersection over union of unchanged 
+and changed pixels respectively, the IoU measure is computed as 
+follows: 
+IoU
+c
+=
+∑
+N
+i = 1
+∑
+N
+j = 1
+S
+ij
+(
+∑
+N
+i = 0
+∑
+N
+j = 0
+S
+ij
+  S
+00
+) (14)  
+IoU
+nc
+=
+S
+00
+∑
+N
+j = 0
+S
+0 j
++
+∑
+N
+i = 0
+S
+i 0
+  S
+00
+(15)  
+The mIoU is derived from IoU
+nc 
+and IoU
+c
+: 
+mIoU =
+1
+2
+( IoU
+nc
++ IoU
+c
+) (16) 
+Here we use a SeK measure that excludes S
+00 
+to alleviate the class 
+imbalance issues ( Yang et al., 2021 ): 
+Sek = e
+IoU c   1
+•
+̂ρ   ̂η
+1   ̂η
+(17)  
+̂ρ =
+∑
+N
+i = 1
+S
+ii
+(
+∑
+N
+i = 0
+∑
+N
+j = 0
+S
+ij
+  S
+00
+) (18)  
+̂η =
+∑
+N
+j = 0
+ 
+̂
+S
+j +
+•
+̂
+S
++ j
+)
+(
+∑
+N
+i = 0
+∑
+N
+j = 0
+S
+ij
+  S
+00
+)
+2
+(19)  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 7 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+324
+where 
+̂
+S
+j +
+and 
+̂
+S
++ j 
+indicate the row sum and column sum excluding S
+00 
+from the confusion matrix S . 
+The F 1
+scd 
+measure is derived from the F 1-score for SCD evaluation 
+( Ding et al., 2022 ): 
+P
+scd
+=
+∑
+N
+i = 1
+S
+ii
+∑
+N
+i = 1
+∑
+N
+j = 0
+S
+ij
+(20)  
+R
+scd
+=
+∑
+N
+i = 1
+S
+ii
+∑
+N
+i = 0
+∑
+N
+j = 1
+S
+ij
+(21)  
+F 1
+scd
+=
+2 × P
+scd
+× R
+scd
+P
+scd
++ R
+scd
+(22)  
+where P
+scd 
+and R
+scd 
+refer to precision and recall, respectively. 
+Last, we formulate a global evaluation measure, i.e., OS , to assess the 
+overall accuracy of SCD ( Zheng et al., 2022 ), defined as: 
+OS = 0 . 3 × mIoU + 0 . 7 × SeK . (23)  
+3. Study datasets 
+3.1. Public SCD datasets 
+We first evaluate our method on two popular SCD datasets: SECOND 
+( Yang et al., 2021 ) and HRSCD ( Daudt et al., 2019 ) datasets. The SEC -
+OND dataset contains 4662 pairs of bi-temporal images with spatial 
+resolutions ranging from 0.5 m to 3 m ( Yang et al., 2021 ), collected from 
+various Chinese cities, including Chengdu, Shanghai, and Hangzhou. For 
+the SECOND dataset, however, only 2968 pairs of bi-temporal images 
+with ground-truth labels are available. These ground-truth labels have 
+seven classes: one unchanged class and six land cover classes, corre -
+sponding to ground, water, trees, low vegetation, buildings, and play -
+grounds. These images are divided into smaller images with a size of 
+256 × 256 pixels. We then randomly split these cropped images into 
+training and testing datasets in an 8:2 ratio, generating 9500 image pairs 
+for training and 2372 image pairs for testing. The HRSCD dataset con -
+tains 291 pairs of bi-temporal aerial images with a size of 10000 ×
+10000 pixels and spatial resolution of 0.5 m, collected from several cities 
+and rural areas in France in 2006 and 2012 ( Daudt et al., 2019 ). It in -
+cludes six classes: unchanged, forests, artificial surfaces, wetlands, 
+agricultural areas, and water, with a majority of pixels labeled as un -
+changed. The artificial surfaces and agricultural areas only account for 
+0.6 % in this dataset ( Zhao et al., 2022 ). We first crop these images into 
+256 × 256 pixels, and discard images with few changed pixels ( < 10 %). 
+Next, we randomly split these images into training and testing datasets 
+in an 8:2 ratio, generating 10,704 and 2675 image pairs for training and 
+testing, respectively. 
+3.2. Cropland SCD datasets 
+We obtain two additional datasets from real applications to further 
+evaluate the generalizability of our proposed method. These datasets are 
+used to detect changes from cropland areas to non-cropland areas in 
+Fuzhou and Xiamen cities, China, respectively. Most changed objects on 
+the Fuzhou dataset with small sizes and changed scenarios are more 
+complex than on the Xiamen dataset. For the Fuzhou dataset, we acquire 
+three pairs of bi-temporal images from the Changle (CL) and Minhou 
+(MH) districts, on the Google Earth platform with a spatial resolution of 
+0.5 m ( Fig. 5 a). For the Xiamen dataset, two pairs of bi-temporal images 
+are collected from the Google Earth platform in the Tongan (TA) and 
+Xiangan (XA) districts ( Fig. 5 b). Detailed image information of these two 
+datasets can be found in Table 1 . Both datasets include seven classes: 
+unchanged, tree, cropland, building, water, bare land, and road, leading 
+to six underlying “ from cropland areas to non-cropland areas ” cases. We 
+first crop bi-temporal image pairs into smaller image pairs with a size of 
+256 × 256 pixels, and then randomly split these cropped image pairs 
+into training and testing datasets according to a 7:3 ratio. We finally 
+obtain 6104 and 4542 image pairs for training and 2615 and 1946 image 
+pairs for testing on the Fuzhou and Xiamen datasets, respectively. 
+Fig. 5. Overview of the bitemporal high-resolution Google Erath images used in the Fuzhou (a) and Xiamen (b) datasets. Samples are collected in red-box areas. (For 
+interpretation of the references to colour in this figure legend, the reader is referred to the web version of this article.) 
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 8 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+325
+3.3. Experiment details 
+All experiments are implemented using a 24 GB NVIDIA GPU 
+(GeForce RTX 3090). We use the Stochastic Gradient Descent (SGD) 
+optimizer with initial learning rates of 0.005, 0.001, 0.001, and 0.001 
+for model training on the SECOND, HRSCD, Fuzhou, and Xiamen data -
+sets, respectively. We train our model for 80 epochs using a batch size of 
+8 and a weight decay of 5 × 10
+-4
+. To train the nine existing models, we 
+follow the recommended settings from previous studies. During training, 
+we apply data augmentation techniques, such as random rotation and 
+flipping, to all models. 
+4. Experimental results 
+4.1. Ablation studies 
+We first conducted ablation studies on the SECOND dataset, incor -
+porating the proposed modules MSCF, SFSR, TC, and SDI, and compared 
+their performance with that of a baseline method lacking these en -
+hancements. Table 2 presents the accuracy of SCD results, indicating 
+that the integration of these proposed modules led to increased accuracy 
+across all evaluation measures. Notably, the baseline method yielded an 
+overall score (OS) and F 1
+scd 
+values that were reduced by 4.91 % and 
+6.06 %, respectively, compared to HGINet. This implies that the pro -
+posed modules considerably enhance SCD accuracy. In particular, the 
+inclusion of the SDI module had a substantial impact on SCD accuracy, 
+as evidenced by an increase in OS by 3.91 % and F 1
+scd 
+by 4.57 %. Uti -
+lizing the “ thop ” library ( https://github.com/Lyken17/pytorch- 
+OpCounter ) to evaluate the computational efficiency of these proposed 
+modules ( Table 2 ) revealed that they are lightweight, contributing a 
+minimal increase in parameters and computational requirements. 
+Fig. 6 shows the ablation results, where HGINet identified changed 
+areas with regular boundaries and the highest concordance with the 
+ground truth. In particular, incorporating the MSCF module enhanced 
+the identification of large objects (the blue circles shown in Figs. 6 (a) 
+and (b)). Incorporating the SFSR module yielded regular boundaries, as 
+shown by the red circles in Figs. 6 (c) and (d), indicating refined 
+boundary details. In addition, the proposed TC module effectively 
+improved unchanged area identification (the blue circles in Fig. 6 (e)), 
+implying alleviated spectral effects. The SDI module was also essential 
+for identifying changed areas and categories, especially in complex 
+scenarios (the red circles in Fig. 6 (f)). 
+We also conducted ablation studies on the HRSCD dataset to evaluate 
+the modules ’ effectiveness. The results indicated that incorporating 
+these proposed modules improved the identification of changed areas 
+and categories ( Fig. S1 ) and resulted in higher detection accuracy than 
+baseline methods ( Table S1 ). A detailed experimental analysis is avail -
+able in the Supplementary document , referring to Section S1. 
+4.2. Comparison experiments between different feature extractors 
+To evaluate the proposed feature extractor MPANet, we substituted it 
+with ResNet34, Efficient-B3, and PVT-V2 to form the HGINet
+Res
+, HGI -
+Net
+Eff
+, and HGINet
+PVT 
+models, respectively. All models were trained 
+using identical parameters and pretrained ImageNet weights to ensure a 
+fair comparison. Table 3 presents the SCD accuracy using different ex -
+tractors on the SECOND dataset. The HGINet employing MPANet per -
+formed better than other methods with respect to SeK and F 1
+scd 
+values, 
+exceeding HGINet
+Res
+, HGINet
+Eff
+, and HGINet
+PVT 
+by 6.34 % and 6.46 %, 
+5.90 % and 6.13 %, and 3.68 % and 3.71 %, respectively. Large accuracy 
+differences exist for different extractors, with transformer-based HGI -
+Net
+PVT 
+and HGINet performing better than their CNN-based counter -
+parts, i.e., HGINet
+Res 
+and HGINet
+Eff
+. 
+Fig. 7 shows these SCD results. The HGINet using MPANet produced 
+more accurate results with well-delineated shapes than the other 
+methods ( Figs. 7 (a) and (b)). It demonstrated superior performance in 
+identifying changed areas and categories and mitigating image differ -
+ences caused by seasonal changes ( Figs. 7 (c) and (d)). Furthermore, the 
+MPANet-based HGINet showed more robust identification of various 
+objects than the CNN-based HGINet
+Res
+, HGINet
+Eff
+, and transformer- 
+based HGINet
+PVT 
+( Figs. 7 (e) and (f)). 
+We also conducted experiments to verify the robustness of the pro -
+posed MPANet on the HRSCD dataset. Our results indicate that HGINet 
+and HGINet
+PVT 
+using transformer networks performed better than 
+HGINet
+Res 
+and HGINet
+Eff 
+using CNNs ( Fig. S2 ). More details were 
+described in Section S2 of the Supplementary document . 
+4.3. Effect of node neighborhoods on detection results 
+To investigate the impact of different node neighborhoods (i.e., 
+bitemporal semantic features, difference features, and both), we tested 
+HGINet
+1st
+, HGINet
+2nd
+, and HGINet on the SECOND dataset ( Table 4 ). 
+This table shows that the full neighborhood used by HGINet achieved 
+the highest accuracy, which is slightly higher than the other two 
+Table 1 
+Detailed image information for the Fuzhou and Xiamen datasets. CL, MH, TA, and XA refer to Changle, Minhou, Tongan, and Xiangan districts, respectively.  
+Datasets Images Spatial resolution Pre-time Post-time Size (pixels) Area (km
+2
+) 
+Fuzhou CL1 0.5 m 2018.03.24 2020.07.19 11824 × 8208  31.33 
+CL2 0.5 m 2018.01.13 2019.02.15 19048 × 17263  105.84 
+MH 0.5 m 2016.03.03 2019.03.20 11978 × 11214  43.18 
+Xiamen TA 0.5 m 2018.08.17 2021.07.28 6448 × 5863  12.37 
+XA 0.5 m 2017.02.11 2021.11.12 8176 × 8127  21.88  
+Table 2 
+Ablation testing of the proposed modules, i.e., MSCF, SFSR, TC, and SDI, on the SECOND dataset. 1 M = 10
+6 
+and 1GFLOPs = 10
+9 
+FLOPs (i.e., floating point of op -
+erations). Blue and red numbers refer to the baseline method and our method (HGINet), respectively.  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 9 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+326
+neighborhoods. 
+We also compared the SCD results between different node neigh -
+borhoods on the HRSCD dataset. Evidence similar to that of the SECOND 
+dataset was obtained (refer to Section S3 in the Supplementary 
+document ). 
+4.4. Effectiveness of GCN modeling and LAM for detection results 
+To evaluate the effectiveness of GCN modeling for detection results, 
+we conducted an ablation study on the SECOND dataset. Table 5 pre -
+sents the evaluation results after removing the GCN (i.e., HGINet
+noGCN
+). 
+This indicates a decrease in the detection accuracy without using GCN. 
+Fig. 8 shows the SCD results produced using HGINet and HGINet
+noGCN 
+on this dataset. Although the two methods did not differ in detection 
+accuracy, we observed considerable false and incomplete detections 
+produced by HGINet
+noGCN 
+in changed areas and categories (the red 
+circles in Figs. 8 (a) and (b)), particularly in complex change scenarios 
+(the red circles in Figs. 8 (c) and (d)). Subsequently, we analyzed the 
+impact of the proposed LAM on the detection results. Removing the LAM 
+embedded in the feature extractor MPANet formed HGINet
+noLAM
+, which 
+was compared with the original HGINet ( Table 5 ). The table shows that 
+the SCD accuracy produced by HGINet
+noLAM 
+is lower than that produced 
+by HGINet. Fig. 8 shows the SCD results produced by the two methods on 
+the SECOND dataset. It demonstrates inaccurate identification of 
+changed objects, particularly for large objects (the red circles in Figs. 8 
+(e) and (f)), upon removal of the LAM. 
+4.5. Comparison of TC with conventional cross-attention methods 
+To verify the robustness of the TC module designed using the cross- 
+learning method, we compared it with two conventional cross-attention 
+modules: a cross-temporal semantic reasoning module (CotSR) ( Ding 
+et al., 2022 ) and a Criss-cross attention module (CCA) ( Huang et al., 
+2019 ), forming HGINet
+CotSR 
+and HGINet
+CCA
+. Table 6 lists the SCD ac -
+curacy of the three methods on the SECOND dataset. The table shows 
+that HGINet with the TC module yields the highest accuracy with respect 
+to all evaluation measures and requires fewer parameters and calcula -
+tions. Subsequently, we presented examples of SCD results obtained 
+from the three methods ( Fig. 9 ), indicating that HGINet outperformed 
+HGINet
+CotSR 
+and HGINet
+CCA 
+in reducing misdetection and omission of 
+unchanged areas ( Figs. 9(a) and (b) ). Moreover, HGINet with the TC 
+module effectively mitigated the effect of fake changes caused by sea -
+sonal variations (the red circle in Fig. 9 (c)). Furthermore, it accurately 
+distinguished between different objects, while HGINet
+CotSR 
+failed (the 
+red circles in Figs. 9(e) and (f) ). 
+4.6. Comparing SCD between existing methods on the public SECOND 
+and HRSCD datasets 
+We compared our method with nine existing methods (BIT, GAS-Net, 
+HRSCD-3, HRSCD-4, FCCDN, SSCDl, Bi-SRNet, PCFN, and MTSCD-Net) 
+using four accuracy evaluation measures on the SECOND dataset 
+( Table 7 ). The results demonstrate that HGINet achieved the highest 
+Fig. 6. Examples of the ablation results on the SECOND dataset. (a), (c), and (e) Pre-time images, and (b), (d), and (f) post-time images.  
+Table 3 
+Comparison of SCD results between different feature extractors on the SECOND 
+dataset.  
+Methods mIoU 
+(%) 
+SeK 
+(%) 
+OS 
+(%) 
+F 1
+scd
+(%) SeK ↓ 
+(%) 
+F 1
+scd
+↓ (%) 
+HGINet
+Res  
+67.20  13.00  29.26  53.02  6.34  6.46 
+HGINet
+Eff  
+67.50  13.44  29.66  53.35  5.90  6.13 
+HGINet
+PVT  
+68.82  15.66  31.61  55.77  3.68  3.71 
+HGINet  70.76  19.34  34.77  59.48    
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 10 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+327
+accuracy across all evaluation measures. The increase in the SeK mea -
+sure ranges from 0.83 % (compared to the second-best method, MTSCD- 
+Net) to 10.18 % (HRSCD-3). We also compared the number of param -
+eters and calculations between different SCD methods using the same 
+input size of 256 × 256 pixels on the SECOND dataset ( Table 7 ). The 
+findings indicate that HGINet exhibited fewer parameters and compu -
+tation load than most existing methods, achieving an effective trade-off 
+between detection accuracy and operational efficiency. 
+Fig. 10 shows the SCD results obtained using different methods on 
+the SECOND dataset. Our method effectively recognized the changed 
+areas and categories with well-delineated boundaries and high 
+Fig. 7. Examples of semantic change results using different feature extractors on the SECOND dataset. (a), (c), and (e) Pre-time images, and (b), (d), and (f) post- 
+time images. 
+Table 4 
+Comparison of SCD results between different node neighborhoods used in GCN 
+of SDI module on the SECOND dataset.  
+Methods mIoU (%) SeK (%) OS (%) F 1
+scd
+(%) 
+HGINet
+1st  
+70.59  18.96  34.45  59.12 
+HGINet
+2nd  
+70.49  19.03  34.47  59.03 
+HGINet  70.76  19.34  34.77  59.48  
+Table 5 
+Evaluation results of SCD by removing GCN and LAM on the SECOND dataset.  
+Methods mIoU (%) SeK (%) OS (%) F 1
+scd
+(%) 
+HGINet
+noLAM  
+70.33  18.50  34.05  58.82 
+HGINet
+noGCN  
+70.63  18.68  34.27  58.66 
+HGINet  70.76  19.34  34.77  59.48  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 11 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+328
+compactness ( Figs. 10 (a) and (b)). It mitigated the impact of false 
+changes caused by spectral variations ( Figs. 10 (c) and (d)) and elimi -
+nated the disturbance of shadows caused by building occlusion ( Fig. 10 
+(f)). However, multitask networks such as FCCDN, BIT, and GAS-Net, 
+originally designed for BCD, proved insufficient in identifying the 
+changed areas and categories. 
+Furthermore, we compared our method with existing methods on the 
+HRSCD dataset ( Table 8 ). Our method achieved the highest accuracy 
+compared to the other nine methods in terms of all evaluation measures. 
+In particular, it exceeded these advanced methods by 1.78 % (Bi-SRNet) 
+to 30.21 % (FCCDN) with respect to the F 1
+scd 
+measure. We also observed 
+that MTSCD-Net and PCFN had lower SeK accuracy of 3.55 % and 9.91 
+% on the HRSCD dataset, respectively, compared to their accuracy of 
+18.51 % and 17.97 % on the SECOND dataset. This discrepancy may be 
+attributed to the highly imbalanced categories in the HRSCD dataset, 
+which pose additional challenges for SCD. In contrast, our method 
+Fig. 8. Examples of SCD results using HGINet, HGINet
+noGCN
+, and HGINet
+noLAM 
+on the SECOND dataset. (a), (c), and (e) Pre-time images, and (b), (d), and (f) post- 
+time images. 
+Table 6 
+Evaluation results of SCD produced by HGINet, HGINet
+CotSR, 
+and HGINet
+CCA 
+on 
+the SECOND dataset.  
+Methods mIoU 
+(%) 
+SeK 
+(%) 
+OS 
+(%) 
+F 1
+scd
+(%) Params 
+(M) 
+GFLOPs 
+HGINet
+CotSR  
+70.45  18.84  34.32  59.23  27.70  12.74 
+HGINet
+CCA  
+70.46  18.90  34.37  59.20  27.70  12.65 
+HGINet  70.76  19.34  34.77  59.48  27.68  12.63  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 12 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+329
+achieved higher detection accuracy on both the SECOND and HRSCD 
+datasets. 
+Fig. 11 shows a comparison of the SCD results between different 
+methods on the HRSCD dataset. Our method accurately identified 
+“ from – to ” change information, resulting in well-delineated boundaries 
+and shapes, with fewer misdetections and omissions compared to other 
+methods. Our method outperformed recent methods such as Bi-SRNet, 
+GAS-Net, and PCFN across various ground scenarios. Moreover, 
+methods initially developed for BCD, such as BIT, struggled to identify 
+the changed areas and categories on the highly imbalanced HRSCD 
+dataset. 
+4.7. SCD of the Fuzhou and Xiamen datasets 
+To further assess the generalizability of the proposed HGINet for 
+various change scenarios, we applied it to two cropland SCD datasets 
+Fig. 9. Examples of SCD results produced by HGINet, HGINet
+CotSR
+, and HGINet
+CCA
+, on the SECOND dataset. (a), (c), and (e) Pre-time images, and (b), (d), and (f) 
+post-time images. 
+Table 7 
+Comparison of SCD results, number of parameters, and computation load among 
+various methods on the SECOND dataset. Note: 1 M = 10
+6 
+and 1 GFLOPs = 10
+9 
+FLOPs (i.e., floating point of operations).  
+Methods mIoU 
+(%) 
+SeK 
+(%) 
+OS 
+(%) 
+F 1
+scd
+(%) Params 
+(M) 
+GFLOPs 
+HRSCD-3  65.01  9.16  25.91  47.95  12.77  10.67 
+FCCDN  68.17  13.68  30.02  53.23  6.25  12.38 
+BIT  67.67  13.97  30.08  53.90  3.55  9.99 
+GAS-Net  68.27  15.64  31.43  55.94  23.52  290.10 
+HRSCD-4  70.01  16.60  32.62  55.93  13.71  10.92 
+SSCDl  70.49  17.72  33.55  57.16  23.31  47.39 
+Bi-SRNet  70.55  17.88  33.68  57.74  23.39  47.48 
+PCFN  70.19  17.97  33.64  58.20  56.72  36.54 
+MTSCD- 
+Net  
+69.71  18.51  33.87  57.70  33.93  41.34 
+HGINet  70.76  19.34  34.77  59.48  27.68  12.63  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 13 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+330
+collected from the Fuzhou and Xiamen areas in China. We trained 
+HGINet on the Fuzhou and Xiamen datasets using the experimental 
+settings, as described in Section 3.3 . Table 9 shows the evaluation ac -
+curacy of the SCD results for these two datasets. The detection accuracy 
+of mIoU is higher than 74 %. The detection results on the Xiamen dataset 
+were found to have higher accuracy than those on the Fuzhou dataset, 
+likely due to the changed objects on the Fuzhou dataset are found to 
+have irregular distributions and small sizes, which present more chal -
+lenges for SCD. The SCD results produced by HGINet on these datasets 
+are displayed in Figs. 12 and 13 . These figures indicate that HGINet 
+produced satisfactory results for detecting the changed areas and cate -
+gories characterized in the Fuzhou and Xiamen areas. It also effectively 
+distinguished different changed objects with various shapes, sizes, and 
+appearances. 
+We also compared HGINet with the three advanced methods HRSCD- 
+4, Bi-SRNet, and PCFN on the two datasets. Experimental results 
+indicate that other methods, such as HRSCD-4 and PCFN, failed to 
+accurately distinguish objects with similar spectral features, such as 
+trees and cropland, while the proposed HGINet accurately identified 
+these changes (see Fig. S4 in the Supplementary document ). These re -
+sults further support the suitability of our method for various change 
+settings and areas (detailed information is available in Section S4 of the 
+Supplementary document ). 
+4.8. Transferability testing 
+To test the transferability of our method across different areas, we 
+applied the HGINet trained on the Fuzhou dataset to detect changed 
+areas and categories on the Xiamen dataset. The parameters set for 
+training HGINet were the same as those detailed in Section 3.3 . Table 10 
+evaluates the accuracy of the results transferred by HGINet on the Xia -
+men dataset. The transferred results (FZ-XM) only decreased by 7.65 % 
+in the mIoU value compared with using the model directly trained on the 
+Xiamen area (i.e., XM
+dt
+). The detection results are shown in Fig. 14 , 
+which indicate that HGINet successfully transferred to areas with 
+different land characteristics as well as spectral and seasonal differences, 
+even using a small training set. These results indicate the high potential 
+of our method for transferring to various areas. 
+5. Discussion 
+This paper investigated a novel multitask neural network, HGINet, 
+for SCD from high-resolution remote sensing images. HGINet integrates 
+two semantic segmentation tasks and a change detection task within a 
+multitask architecture to constrain the learning of semantic category 
+information. We considered TCs among different semantic features to 
+Fig. 10. Examples of SCD results obtained using different methods on the SECOND dataset. Panels (a), (c), and (e) show pre-time images, and (b), (d), and (f) display 
+post-time images. 
+Table 8 
+Accuracy of SCD results between different methods on the HRSCD dataset.  
+Methods mIoU (%) SeK (%) OS (%) F 1
+scd
+(%) 
+FCCDN  59.92    0.30  17.77  33.91 
+HRSCD-3  64.81  2.65  21.30  49.57 
+MTSCD-Net  62.68  3.55  21.29  43.84 
+BIT  58.45  3.81  20.20  37.06 
+HRSCD-4  65.99  4.10  22.66  45.86 
+PCFN  65.81  9.91  26.68  58.63 
+GAS-Net  66.93  11.49  28.12  60.29 
+SSCDl  68.12  12.89  29.46  62.28 
+Bi-SRNet  68.16  12.97  29.53  62.34 
+HGINet  68.92  14.55  30.86  64.12  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 14 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+331
+maintain high feature similarity for unchanged areas, thereby allevi -
+ating false changes caused by seasonal and spectral differences. We 
+characterized the interactions among different features in graph space, 
+thereby improving the identification of complex change scenarios. This 
+approach differs from forming feature maps by simply incorporating 
+bitemporal semantic features and their differences in a high-dimensional 
+space ( Ding et al., 2022; Xia et al., 2022; Cui and Jiang, 2023 ). There -
+fore, this study contributes to a more robust SCD model, outperforming 
+nine existing methods in terms of detection accuracy and computation 
+efficiency. A notable characteristic is that HGINet exhibits high adapt -
+ability to various SCD settings. 
+5.1. Effectiveness of the proposed feature extractor 
+Recent studies have indicated that CNN-based feature extractors are 
+insufficient for modeling the long-distance contexts of ground objects, 
+leading to poor detection results and low accuracy, particularly for 
+complex objects ( Zheng et al., 2022 ). By integrating near- and long- 
+distance contexts at multiple levels, MPANet enhanced the feature 
+learning of large objects with complex shapes. This showed that HGINet, 
+embedding MPANet, evidently exceeded other popular methods, such as 
+based ResNet34, Efficient-B3, and PVT-V2. It obtained satisfactory 
+detection results with well-delineated shapes, even for objects with 
+similar spectral characteristics (see Fig. 7 ). Future efforts should focus 
+on boundary regularization, e.g., by constructing auxiliary tasks to 
+constrain the learning of geometric features, to further improve the 
+geometric aspect of SCD ( Long et al., 2022 ; Li et al., 2023a ). 
+5.2. TC module improves the identification of unchanged areas 
+Conventional SCD with triple-branch architecture ( Daudt et al., 
+2019; Yang et al., 2021 ) inadequately models the correlations between 
+bitemporal semantic features. To address this issue, HGINet modeled the 
+correlations using a lightweight TC module, enhancing the representa -
+tion of bitemporal semantic features of unchanged areas. This can 
+mitigate the effects of image differences caused by seasonal changes. 
+Our TC module also performed better than two popular conventional 
+cross-attention methods (see Fig. 9 ), namely CCA ( Huang et al., 2019 ) 
+and Cot-SR ( Daudt et al., 2019 ), due to its capability in modeling the 
+global correlations between bitemporal semantic features. Related 
+studies have further indicated that integrating positional embedding can 
+even improve the detection accuracy of SCD ( Chen et al., 2021b ), which 
+is also an interesting direction for further study. 
+5.3. SDI module improves the detection of complex scenarios 
+Traditional CNNs face challenges in modeling the interactions be -
+tween different layers of deep semantic features, particularly those 
+learned in a long-distance context. Modeling such interactions within an 
+SCD setting using bitemporal images is even more challenging. In 
+contrast, GCNs excel in modeling feature interactions of nonstructured 
+data and have been successfully applied in various computer vision tasks 
+Fig. 11. Examples of SCD results using different methods on the HRSCD dataset. (a), (c), and (e) Pre-time images, and (b), (d), and (f) post-time images.  
+Table 9 
+Evaluation of SCD results produced by the proposed HGINet on the Fuzhou and 
+Xiamen datasets.  
+Datasets mIoU (%) SeK (%) OS (%) F 1
+scd
+(%) 
+Fuzhou  74.83  18.28  35.25  64.45 
+Xiamen  87.77  51.12  62.12  84.93  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 15 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+332
+( Chen et al., 2019 ). HGINet ’ s SDI module, incorporating a GCN, models 
+the interactions of different feature layers (channels) of extracted 
+bitemporal semantic features, their corresponding difference features, 
+and both. This approach has enhanced the identification of changed 
+areas, particularly in complex SCD scenarios. For instance, removing 
+GCN from the SDI module resulted in noticeable omissions in SCD re -
+sults, such as ground and low vegetation with similar spectra (see Fig. 8 ). 
+Moreover, the detection accuracy of HGINet considerably surpassed that 
+of other existing methods, such as HRSCD-4, PCFN, and Bi-SRNet, by 10 
+% in terms of the F 1
+scd 
+measure on the Fuzhou dataset, which includes 
+complex scenarios (refer to Table S4 in the Supplementary document ). 
+These findings further underscore the effectiveness of the proposed SDI 
+module in learning feature layer interactions, thereby improving the 
+semantic representation of complex SCD scenarios. 
+Fig. 12. Results of SCD produced by HGINet on the Fuzhou dataset. CL and MH denote Changle and Minhou districts, respectively.  
+Fig. 13. Results of SCD produced by HGINet on the Xiamen dataset. TA and XA denote Tongan and Xiangan districts, respectively.  
+Table 10 
+Evaluation of SCD results on the Xiamen (XM) dataset using the HGINet trained 
+on the Fuzhou (FZ) dataset. XM
+dt 
+refers to the HGINet directly trained on the 
+Xiamen dataset, and FZ-XM refers to the transferred HGINet.  
+Methods mIoU (%) SeK (%) OS (%) F 1
+scd
+(%) 
+XM
+dt  
+87.77  51.12  62.12  84.93 
+FZ-XM  80.12  27.21  43.08  72.37  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 16 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+333
+5.4. Analysis of model complexity 
+We evaluated the model complexity of the proposed HGINet and nine 
+existing methods ( Table 7 ). The proposed method produced fewer pa -
+rameters (27.28 M) and computation load (12.63 GFLOPs) compared to 
+most existing methods, e.g., GAS-Net, SSCDl, Bi-SRNet, PCFN, and 
+MTSCD-Net, due to its lightweight backbone and modules. In addition, 
+we observed that using modules based on the attention mechanism (i.e., 
+SFSR and TC modules) and GCN (i.e., SDI module) introduced fewer 
+parameters and computation loads compared to MSCF based on tradi -
+tional convolution operations ( Table 2 ). Our method has shown the 
+highest agreement with the ground truth, however, an extremely 
+lightweight model, i.e., BIT, failed to effectively detect changed areas 
+and categories ( Figs. 10 and 11 ). A larger model also obtained a 
+Fig. 14. Results of SCD by transferring HGINet trained using Fuzhou images to Xiamen images. TA and XA denote Tongan and Xiangan districts, respectively.  
+Fig. 15. Demonstration of incorrect annotations in the SECOND (top) and HRSCD (bottom) datasets.  
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 17 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+334
+relatively higher detection accuracy (see Tables 7 and 8 ). However, the 
+largest model, GAS-Net, originally from BCD, did not substantially 
+improve SCD accuracy ( Table 7 ). This may be attributed to the 
+extremely imbalanced changed categories on the SECOND dataset. 
+5.5. Analysis of model adaptability and transferability 
+HGINet has been applied in extensive experiments using four SCD 
+datasets collected from high-resolution remote sensing images. These 
+datasets were particularly characterized by imbalanced categories. 
+HGINet outperformed nine existing methods and proved suitable for 
+SCD across diverse scenarios. Our results generally achieved higher 
+detection accuracy in datasets with fewer types of changes, such as those 
+for the areas of Fuzhou and Xiamen, compared to those with more 
+complex changes, such as the SECOND and HRSCD datasets. Moreover, 
+the detection accuracy in the Xiamen area, with fewer change scenarios, 
+was higher than that for changed objects in the Fuzhou area, charac -
+terized by small sizes and irregular distribution. Furthermore, our 
+method exhibited high adaptability and successfully transferred it to 
+different areas, even those with substantial seasonal and spectral dif -
+ferences. However, challenges were identified in scenarios with vague 
+boundaries and target objects surrounded by highly complex land 
+covers. An issue was also discovered in the public SECOND and HRSCD 
+datasets, which contained many incorrect ground truth labels ( Fig. 15 ), 
+affecting model training and subsequent prediction. To address this 
+issue, exploring the use of semisupervised or unsupervised learning 
+techniques to generate high-quality pseudolabels could be beneficial for 
+improving SCD results ( Sun et al., 2022; Wu et al., 2023 ). 
+6. Conclusions 
+In this study, we developed HGINet, a hierarchical semantic graph 
+interaction network for SCD from bitemporal high-resolution remote 
+sensing images. The experimental results allow us to conclude the 
+following:  
+1) HGINet demonstrated superior performance in detecting changed 
+areas and categories, exceeding nine SOTA methods by 1.28 % – 
+11.53 %, 1.78 % – 30.21 %, 10.32 % – 25.42 %, and 1.34 % – 17.69 % in 
+F 1
+scd 
+measure on four SCD datasets. 
+2) The proposed feature extractor (MPANet) efficiently extracted ob -
+jects with well-delineated boundaries and shapes, making it well- 
+suited for detecting object changes with diverse shapes and sizes. 
+MPANet also outperformed other feature extractor networks such as 
+ResNet34, Efficient-B3, and PVT-V2.  
+3) Based on the cross-learning method, we designed a TC module to 
+enhance the detection of unchanged areas by exploiting temporally 
+correlated information, performing better than traditional cross- 
+attention methods such as CotSR and CCA.  
+4) We developed an SDI module using GCN to model the interactions of 
+different feature layers in bitemporal semantic features, their cor -
+responding difference features, and both. Incorporating such a 
+module further improved the SCD results, leading to an increase of 
+F 1
+scd 
+by 5.64 % and 4.08 % compared with the baseline method on 
+the SECOND and HRSCD datasets, respectively.  
+5) Transferring our method trained using one dataset (e.g., the Fuzhou 
+dataset) to detect semantic changes in other areas (e.g., Xiamen 
+areas) was successfully conducted, implying the high adaptability of 
+HGINet. 
+To further improve the detection performance of the proposed 
+method, future works should investigate the effectiveness of auxiliary 
+tasks (boundary), position information encoding, and semisupervised 
+learning in constraining the learning of geometric features, enhancing 
+the position representation of the changed areas, and producing high- 
+quality pseudo labels, respectively. 
+Declaration of competing interest 
+The authors declare that they have no known competing financial 
+interests or personal relationships that could have appeared to influence 
+the work reported in this paper. 
+Acknowledgments 
+We thank the National Natural Science Foundation of China with 
+Grant No. 42001283, the Fujian Water Science and Technology Project 
+with Grant No. MSK202214, and the Fujian Science and Technology 
+Plan Project with Grant No. 2022C0024 for supporting this research, and 
+thank Haihan Lin from Fuzhou University for providing the non- 
+cropland semantic change detection datasets. 
+Appendix A. Supplementary data 
+Supplementary data to this article can be found online at https://doi. 
+org/10.1016/j.isprsjprs.2024.04.012 . 
+References 
+Afrasinei, G.M., Melis, M.T., Buttau, C., Bradd, J.M., Arras, C., Ghiglieri, G., 2017. 
+Assessment of remote sensing-based classification methods for change detection of 
+salt-affected areas (Biskra area, Algeria). J. Appl. Remote Sens. 11 (1), 016025 . 
+Cervi ˜no, J., Bazerque, J. A., Calvo-Fullana, M., and Ribeiro, A. (2021). Multi-task 
+supervised learning via cross-learning. In 2021 29th European Signal Processing 
+Conference (EUSIPCO) IEEE: 1381-1385. 
+Chen, Y., M. Rohrbach, Z. Yan, Y. Shuicheng, J. Feng and Y. Kalantidis (2019). Graph- 
+based global reasoning networks. Proceedings of the IEEE/CVF Conference on 
+Computer Vision and Pattern Recognition: 433-442. 
+Chen, S., K. Yang, S. Rainer. Dr-tanet: Dynamic receptive temporal attention network for 
+street scene change detection (2021). Proceedings of IEEE Intelligent Vehicles 
+Symposium (IV): 502-509. 
+Chen, H., Qi, Z., Shi, Z., 2021a. Remote sensing image change detection with 
+transformers. IEEE Trans. Geosci. Remote Sens. 60, 1 – 14 . 
+Chen, Z., Wei, X.-S., Wang, P., Guo, Y., 2021c. Learning graph convolutional networks 
+for multi-label recognition and applications. IEEE Trans. Pattern Anal. Mach. Intell. 
+Chen, P., Zhang, B., Hong, D., Chen, Z., Yang, X., Li, B., 2022a. FCCDN: Feature 
+constraint network for VHR image change detection. ISPRS J. Photogramm. Remote 
+Sens. 187, 101 – 119 . 
+Chen, Z., Zhou, Y., Wang, B., Xu, X., He, N., Jin, S., Jin, S., 2022b. EGDE-Net: A building 
+change detection method for high-resolution remote sensing imagery based on edge 
+guidance and differential enhancement. ISPRS J. Photogramm. Remote Sens. 191, 
+203 – 222 . 
+Cui, F., Jiang, J., 2023. MTSCD-Net: A network based on multi-task learning for semantic 
+change detection of bitemporal remote sensing images. Int. J. Appl. Earth Obs. 
+Geoinf. 118, 103294 . 
+Daudt, R. C., B. Le Saux and A. Boulch (2018). Fully convolutional siamese networks for 
+change detection. 2018 25th IEEE International Conference on Image Processing 
+(ICIP), IEEE: 4063-4067. 
+Daudt, R.C., Le Saux, B., Boulch, A., Gousseau, Y., 2019. Multitask learning for large- 
+scale semantic change detection. Comput. Vis. Image Underst. 187, 102783 . 
+Ding, L., Guo, H., Liu, S., Mou, L., Zhang, J., Bruzzone, L., 2022. Bi-temporal semantic 
+reasoning for the semantic change detection in HR remote sensing images. IEEE 
+Trans. Geosci. Remote Sens. 60, 1 – 14 . 
+Huang, Z., Wang, X., Huang, L., Huang, C., Wei, Y., and Liu, W. (2019). Ccnet: Criss-cross 
+attention for semantic segmentation. In Proceedings of the IEEE/CVF international 
+conference on computer vision: 603-612. 
+Huang, X., Wen, D., Li, J., Qin, R., 2017. Multi-level monitoring of subtle urban changes 
+for the megacities of China using high-resolution multi-view satellite imagery. 
+Remote Sens. Environ. 196, 56 – 75 . 
+Jiao, J., Tang, Y.M., Lin, K.Y., Gao, Y., Ma, J., Wang, Y., Zheng, W.S., 2023. Dilateformer: 
+Multi-scale dilated transformer for visual recognition. IEEE Trans. Multimedia . 
+Kipf, T. N. and M. Welling (2016). Semi-supervised classification with graph 
+convolutional networks. arXiv preprint arXiv:1609.02907. 
+Li, Y. and A. Gupta (2018). Beyond grids: Learning graph representations for visual 
+recognition. Advances in neural information processing systems 31. 
+Li, M., Long, J., Stein, A., Wang, X., 2023a. Using a semantic edge-aware multi-task 
+neural network to delineate agricultural parcels from remote sensing images. ISPRS 
+J. Photogramm. Remote Sens. 200, 24 – 40 . 
+Li, M., Liu, X., Wang, X., Xiao, P., 2023b. Detecting building changes using multi-modal 
+Siamese multi-task networks from very high resolution satellite images. IEEE Trans. 
+Geosci. Remote Sens. 61, 1 – 22 . 
+Liu, Z., Y. Lin, Y. Cao, H. Hu, Y. Wei, Z. Zhang, S. Lin and B. Guo (2021). Swin 
+transformer: Hierarchical vision transformer using shifted windows. Proceedings of 
+the IEEE/CVF international conference on computer vision: 10012-10022. 
+Liu, T., Yang, L., Lunga, D., 2021a. Change detection using deep learning approach with 
+object-based image analysis. Remote Sens. Environ. 256, 112308 . 
+J. Long et al.                                                                                                                                                                                                                                     \n\n===== PAGE 18 =====\nISPRS Journal of Photogrammetry and Remote Sensing 211 (2024) 318–335
+335
+Long, J., Li, M., Wang, X., Stein, A., 2022. Delineation of agricultural fields using multi- 
+task BsiNet from high-resolution satellite images. Int. J. Appl. Earth Obs. Geoinf. 
+112, 102871 . 
+Lunetta, R.S., Knight, J.F., Ediriwickrema, J., Lyon, J.G., Worthy, L.D., 2006. Land-cover 
+change detection using multi-temporal MODIS NDVI data. Remote Sens. Environ. 
+105 (2), 142 – 154 . 
+Lv, Z., Liu, T., Benediktsson, J.A., 2020. Object-oriented key point vector distance for 
+binary land cover change detection using VHR remote sensing images. IEEE Trans. 
+Geosci. Remote Sens. 58 (9), 6524 – 6533 . 
+Mei, J., Li, R.-J., Gao, W., Cheng, M.-M., 2021. CoANet: Connectivity attention network 
+for road extraction from satellite imagery. IEEE Trans. Image Process. 30, 
+8540 – 8552 . 
+Mei, J., Zheng, Y.-B., Cheng, M.-M., 2023. D2ANet: Difference-aware attention network 
+for multi-level change detection from satellite imagery. Computational Visual. Media 
+1 – 17 . 
+Nam, H., J.-W. Ha and J. Kim (2017). Dual attention networks for multimodal reasoning 
+and matching. Proceedings of the IEEE conference on computer vision and pattern 
+recognition: 299-307. 
+Niu, Y., Guo, H., Lu, J., Ding, L., Yu, D., 2023. SMNet: Symmetric Multi-Task Network for 
+Semantic Change Detection in Remote Sensing Images Based on CNN and 
+Transformer. Remote Sens. (Basel) 15 (4), 949 . 
+Peng, D., Zhang, Y., Guan, H., 2019. End-to-end change detection for high resolution 
+satellite images using improved UNet ++ . Remote Sens. (Basel) 11 (11), 1382 . 
+Shen, Q., Huang, J., Wang, M., Tao, S., Yang, R., Zhang, X., 2022. Semantic feature- 
+constrained multitask siamese network for building change detection in high-spatial- 
+resolution remote sensing imagery. ISPRS J. Photogramm. Remote Sens. 189, 78 – 94 . 
+Shu, Q., Pan, J., Zhang, Z., Wang, M., 2022. DPCC-Net: Dual-perspective change 
+contextual network for change detection in high-resolution remote sensing images. 
+Int. J. Appl. Earth Obs. Geoinf. 112, 102940 . 
+Sun, Y., Zhang, X., Huang, J., Wang, H., Xin, Q., 2020. Fine-grained building change 
+detection from very high-spatial-resolution remote sensing images based on deep 
+multitask learning. IEEE Geosci. Remote Sens. Lett. 19, 1 – 5 . 
+Sun, Y., Lei, L., Tan, X., Guan, D., Wu, J., Kuang, G., 2022. Structured graph based image 
+regression for unsupervised multimodal change detection. ISPRS J. Photogramm. 
+Remote Sens. 185, 16 – 31 . 
+Te, G., Y. Liu, W. Hu, H. Shi and T. Mei (2020). Edge-aware graph representation 
+learning and reasoning for face parsing. Computer Vision – ECCV 2020: 16th 
+European Conference, Glasgow, UK, August 23 – 28, 2020, Proceedings, Part XII 16, 
+Springer: 258-274. 
+Tian, S., Zhong, Y., Zheng, Z., Ma, A., Tan, X., Zhang, L., 2022. Large-scale deep learning 
+based binary and semantic change detection in ultra high resolution remote sensing 
+imagery: From benchmark datasets to urban application. ISPRS J. Photogramm. 
+Remote Sens. 193, 164 – 186 . 
+Wang, N., Li, W., Tao, R., Du, Q., 2022a. Graph-based block-level urban change detection 
+using Sentinel-2 time series. Remote Sens. Environ. 274, 112993 . 
+Wang, X., Liu, S., Du, P., Liang, H., Xia, J., Li, Y., 2018. Object-based change detection in 
+urban areas from high spatial resolution images based on multiple features and 
+ensemble learning. Remote Sens. (Basel) 10 (2), 276 . 
+Wang, W., Xie, E., Li, X., Fan, D.-P., Song, K., Liang, D., Lu, T., Luo, P., Shao, L., 2022b. 
+Pvt v2: Improved baselines with pyramid vision transformer. Comput. Visual Media 
+8 (3), 415 – 424 . 
+Woo, S., J. Park, J.-Y. Lee and I. S. Kweon (2018). Cbam: Convolutional block attention 
+module. Proceedings of the European conference on computer vision (ECCV): 3-19. 
+Wu, C., Du, B., Cui, X., Zhang, L., 2017. A post-classification change detection method 
+based on iterative slow feature analysis and Bayesian soft fusion. Remote Sens. 
+Environ. 199, 241 – 255 . 
+Wu, C., B. Du and L. Zhang (2023). Fully Convolutional Change Detection Framework 
+with Generative Adversarial Network for Unsupervised, Weakly Supervised and 
+Regional Supervised Change Detection. IEEE Transactions on Pattern Analysis and 
+Machine Intelligence. 
+Xia, H., Tian, Y., Zhang, L., Li, S., 2022. A Deep Siamese Postclassification Fusion 
+Network for Semantic Change Detection. IEEE Trans. Geosci. Remote Sens. 60, 1 – 16 . 
+Yan, J., Wang, L., Song, W., Chen, Y., Chen, X., Deng, Z., 2019. A time-series 
+classification approach based on change detection for rapid land cover mapping. 
+ISPRS J. Photogramm. Remote Sens. 158, 249 – 262 . 
+Yang, K., Xia, G.-S., Liu, Z., Du, B., Yang, W., Pelillo, M., Zhang, L., 2021. Asymmetric 
+siamese networks for semantic change detection in aerial images. IEEE Trans. 
+Geosci. Remote Sens. 60, 1 – 18 . 
+Zhang, J., Lin, S., Ding, L., Bruzzone, L., 2020. Multi-scale context aggregation for 
+semantic segmentation of remote sensing images. Remote Sens. (Basel) 12 (4), 701 . 
+Zhang, R., Zhang, H., Ning, X., Huang, X., Wang, J., Cui, W., 2023. Global-aware siamese 
+network for change detection on remote sensing images. ISPRS J. Photogramm. 
+Remote Sens. 199, 61 – 72 . 
+Zhao, M., Zhao, Z., Gong, S., Liu, Y., Yang, J., Xiong, X., Li, S., 2022. Spatially and 
+semantically enhanced siamese network for semantic change detection in high- 
+resolution remote sensing images. IEEE J. Sel. Top. Appl. Earth Obs. Remote Sens. 
+15, 2563 – 2573 . 
+Zheng, Z., A. Ma, L. Zhang and Y. Zhong (2021). Change is everywhere: Single-temporal 
+supervised object change detection in remote sensing imagery. Proceedings of the 
+IEEE/CVF international conference on computer vision: 15193-15202. 
+Zheng, Z., Zhong, Y., Tian, S., Ma, A., Zhang, L., 2022. ChangeMask: Deep multi-task 
+encoder-transformer-decoder architecture for semantic change detection. ISPRS J. 
+Photogramm. Remote Sens. 183, 228 – 239 . 
+J. Long et al.                                                                                                                                                                                                                                     

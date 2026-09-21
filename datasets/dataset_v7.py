@@ -7,7 +7,7 @@ import os
 import json
 import torch
 import numpy as np
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from PIL import Image
 
 try:
@@ -93,6 +93,37 @@ def color_jitter(img, brightness=0.2, contrast=0.2, saturation=0.1):
     gray = img.mean(axis=0, keepdims=True)
     img = img * s + gray * (1 - s)
     return np.clip(img, 0, 1).astype(np.float32)
+
+
+
+class ClassAwareCropSampler:
+    """
+    Class-aware cropping: bias crop center toward rare classes.
+    Increases rare class frequency by 5-10x in training patches.
+    """
+    def __init__(self, crop_size=256, rare_prob=0.7):
+        self.crop_size = crop_size
+        self.rare_classes = [1, 2, 4, 7, 8, 9, 10, 12, 13, 14]
+        self.rare_prob = rare_prob
+
+    def get_crop_center(self, label, H, W):
+        crop_h = min(self.crop_size, H)
+        crop_w = min(self.crop_size, W)
+        if np.random.rand() < self.rare_prob:
+            rare_mask = np.zeros_like(label, dtype=bool)
+            for cls in self.rare_classes:
+                rare_mask |= (label == cls)
+            rare_pixels = np.where(rare_mask)
+            if len(rare_pixels[0]) > 0:
+                idx = np.random.randint(len(rare_pixels[0]))
+                cy = int(rare_pixels[0][idx])
+                cx = int(rare_pixels[1][idx])
+                cx = np.clip(cx, crop_w // 2, W - crop_w // 2)
+                cy = np.clip(cy, crop_h // 2, H - crop_h // 2)
+                return cx, cy
+        cx = np.random.randint(crop_w // 2, max(crop_w // 2 + 1, W - crop_w // 2))
+        cy = np.random.randint(crop_h // 2, max(crop_h // 2 + 1, H - crop_h // 2))
+        return cx, cy
 
 
 def random_erasing(img, p=0.3, sl=0.02, sh=0.1):
@@ -209,7 +240,7 @@ class FullImageDataset(Dataset):
     """
     
     def __init__(self, data_dir, config, split='train', scenes=None,
-                 img_size=1024, boxes_dir=None):
+                 img_size=1024, boxes_dir=None, pin_memory=True):
         super().__init__()
         self.data_dir = data_dir
         self.config = config
@@ -226,6 +257,7 @@ class FullImageDataset(Dataset):
         self.label_decode_map = config.get('label_decode_map', None)
         self.state_decode_map = config.get('state_decode_map', None)
         self.augment = (split == 'train')
+        self.crop_sampler = ClassAwareCropSampler(crop_size=img_size) if self.augment else None
         self.is_flat = self._detect_flat_structure()
         
         if scenes is None:
@@ -269,6 +301,11 @@ class FullImageDataset(Dataset):
         return os.path.join(self.data_dir, scene, self.split)
     
     def _collect_samples(self):
+        # Names.txt mode: always prefer names.txt if it exists
+        names_file = os.path.join(self.data_dir, self.split, 'names.txt')
+        if os.path.isfile(names_file):
+            return self._collect_samples_from_names(names_file)
+
         samples = []
         for si, scene in enumerate(self.scenes):
             split_dir = self._get_split_dir(scene)
@@ -276,7 +313,7 @@ class FullImageDataset(Dataset):
             if not os.path.exists(img_dir):
                 continue
             lbl_dir = os.path.join(split_dir, 'label')
-            
+
             files = sorted(os.listdir(img_dir))
             for fname in files:
                 if not fname.endswith(self.pre_suffix + self.image_ext):
@@ -285,10 +322,10 @@ class FullImageDataset(Dataset):
                 pre_path = os.path.join(img_dir, fname)
                 post_path = os.path.join(img_dir, base_name + self.post_suffix + self.image_ext)
                 label_path = os.path.join(lbl_dir, base_name + self.label_suffix + self.label_ext)
-                
+
                 if not os.path.exists(post_path):
                     continue
-                
+
                 inst_key = None
                 if self.instances_json is not None:
                     if self.is_flat or scene == '':
@@ -299,7 +336,7 @@ class FullImageDataset(Dataset):
                         alt_key = f"{self.split}/{base_name}{self.pre_suffix}{self.image_ext}"
                         if alt_key in self.instances_json:
                             inst_key = alt_key
-                
+
                 samples.append({
                     'scene': scene,
                     'base_name': base_name,
@@ -308,10 +345,191 @@ class FullImageDataset(Dataset):
                     'label_path': label_path if os.path.exists(label_path) else None,
                     'inst_key': inst_key,
                 })
-        
+
         print(f"  [{self.split}] Total samples: {len(samples)}")
         return samples
     
+    def _collect_samples_from_names(self, names_file):
+        """Load samples from names.txt, resolving image/label paths from source dirs."""
+        with open(names_file) as f:
+            names = [l.strip() for l in f if l.strip()]
+        
+        # Build path index once: map (split, filename) -> full path
+        # Search self.data_dir and sibling dirs
+        search_dirs = [self.data_dir]
+        parent = os.path.dirname(self.data_dir)
+        if os.path.isdir(parent):
+            for d in os.listdir(parent):
+                candidate = os.path.join(parent, d)
+                if candidate != self.data_dir and os.path.isdir(os.path.join(candidate, self.split, 'image')):
+                    search_dirs.append(candidate)
+        
+        # Build filename -> path lookup for images and labels
+        # Search ALL original splits (train/val/test) since patches may have been reassigned
+        img_map = {}
+        lbl_map = {}
+        for sd in search_dirs:
+            for orig_split in ["train", "val", "test"]:
+                img_dir = os.path.join(sd, orig_split, 'image')
+                lbl_dir = os.path.join(sd, orig_split, 'label')
+                if os.path.isdir(img_dir):
+                    for fname in os.listdir(img_dir):
+                        if fname not in img_map:
+                            img_map[fname] = os.path.join(img_dir, fname)
+                if os.path.isdir(lbl_dir):
+                    for fname in os.listdir(lbl_dir):
+                        if fname not in lbl_map:
+                            lbl_map[fname] = os.path.join(lbl_dir, fname)
+        
+        samples = []
+        for name in names:
+            pre_fname = name + self.pre_suffix + self.image_ext
+            post_fname = name + self.post_suffix + self.image_ext
+            label_fname = name + self.label_suffix + self.label_ext
+            
+            pre_path = img_map.get(pre_fname)
+            post_path = img_map.get(post_fname)
+            label_path = lbl_map.get(label_fname)
+            
+            if pre_path is None:
+                continue
+            
+            samples.append({
+                'scene': '',
+                'base_name': name,
+                'pre_path': pre_path,
+                'post_path': post_path or '',
+                'label_path': label_path,
+                'inst_key': None,
+            })
+        
+        print(f"  [{self.split}] Loaded {len(samples)}/{len(names)} samples from names.txt")
+        return samples
+
+    def _compute_state_sampling_weights(self, rare_states=None, boost=10.0):
+        """Compute per-sample weights using pre-computed scene_state_info.json.
+        Samples from scenes with rare state classes get higher weight.
+        No label file scanning needed - instant computation.
+        """
+        if rare_states is None:
+            rare_states = [2, 4, 5]  # reduced, extended, replaced
+
+        # Try to load pre-computed scene info
+        info_path = os.path.join(self.data_dir, "scene_state_info.json")
+        scene_info = {}
+        if os.path.isfile(info_path):
+            import json
+            with open(info_path) as f:
+                scene_info = json.load(f)
+
+        weights = np.ones(len(self.samples), dtype=np.float64)
+        n_boosted = 0
+        for i, sample in enumerate(self.samples):
+            scene = sample.get('base_name', '')
+            # Extract scene key: remove last _XX_XX patch coords
+            if '_' in scene:
+                scene_key = scene.rsplit('_', 2)[0] if scene.count('_') >= 2 else scene
+            else:
+                scene_key = scene
+
+            info = scene_info.get(scene_key, {})
+            if info.get('has_rare', False):
+                weights[i] = boost
+                n_boosted += 1
+
+        # Normalize so mean weight = 1
+        weights /= weights.mean()
+        print(f"  State-aware sampling: {n_boosted}/{len(weights)} samples boosted (from scene_state_info.json)")
+        return weights
+
+    def _compute_rare_class_sampling_weights(self, rare_class_ids=None, boost=50.0):
+        """Compute per-sample weights for rare class oversampling.
+        Samples containing rare classes (Bridge/Dock/Shelter) get much higher weight.
+
+        Args:
+            rare_class_ids: list of class IDs to oversample (decoded IDs)
+            boost: weight multiplier for samples containing rare classes
+
+        Returns:
+            weights: numpy array of sampling weights
+        """
+        if rare_class_ids is None:
+            rare_class_ids = [4, 7, 10]  # Bridge, Shelter, Dock (decoded IDs)
+
+        target_names = self.config.get('pixel_target_names', self.config.get('target_names', []))
+        rare_names = [target_names[i] if i < len(target_names) else str(i) for i in rare_class_ids]
+
+        # Raw label values that map to rare classes (from label_decode_map)
+        # Bridge(4): 18-22, Shelter(7): 33-37, Dock(10): 48-52
+        raw_label_map = {
+            4: set(range(18, 23)),   # Bridge
+            7: set(range(33, 38)),   # Shelter
+            10: set(range(48, 53)),  # Dock
+        }
+
+        # Cache file for rare class sample indices
+        cache_path = os.path.join(self.data_dir, f"rare_class_samples_{self.split}.json")
+
+        # Try to load cached results
+        if os.path.isfile(cache_path):
+            with open(cache_path) as f:
+                cache = json.load(f)
+            rare_sample_indices = set(cache.get('rare_indices', []))
+            class_sample_counts = cache.get('class_counts', {})
+        else:
+            # Scan label files to find samples containing rare classes
+            print(f"  Scanning labels for rare classes {rare_names}...")
+            print(f"  Raw label ranges: {[(n, sorted(raw_label_map.get(i, []))) for i, n in zip(rare_class_ids, rare_names)]}")
+            rare_sample_indices = set()
+            class_sample_counts = {name: 0 for name in rare_names}
+
+            for i, sample in enumerate(self.samples):
+                label_path = sample.get('label_path')
+                if label_path is None or not os.path.isfile(label_path):
+                    continue
+
+                try:
+                    label = read_label(label_path)
+                    unique_vals = set(np.unique(label).tolist())
+                    for cls_id, cls_name in zip(rare_class_ids, rare_names):
+                        raw_vals = raw_label_map.get(cls_id, set())
+                        if unique_vals & raw_vals:  # Intersection
+                            rare_sample_indices.add(i)
+                            class_sample_counts[cls_name] += 1
+                except Exception:
+                    continue
+
+                # Progress indicator
+                if (i + 1) % 5000 == 0:
+                    print(f"    Scanned {i+1}/{len(self.samples)} samples...")
+
+            # Cache results
+            cache = {
+                'rare_indices': list(rare_sample_indices),
+                'class_counts': class_sample_counts,
+                'rare_class_ids': rare_class_ids,
+                'rare_names': rare_names,
+            }
+            with open(cache_path, 'w') as f:
+                json.dump(cache, f)
+
+        # Print statistics
+        print(f"  Rare class sampling ({self.split}):")
+        for name in rare_names:
+            count = class_sample_counts.get(name, 0)
+            print(f"    {name}: {count} samples")
+        print(f"    Total rare samples: {len(rare_sample_indices)}/{len(self.samples)}")
+
+        # Compute weights
+        weights = np.ones(len(self.samples), dtype=np.float64)
+        for i in rare_sample_indices:
+            weights[i] = boost
+
+        # Normalize so mean weight = 1
+        weights /= weights.mean()
+        print(f"  Rare class boost: {boost}x for {len(rare_sample_indices)} samples")
+        return weights
+
     def __len__(self):
         return len(self.samples)
     
@@ -405,6 +623,27 @@ class FullImageDataset(Dataset):
                 self._img_cache[cache_key] = (pre_img, post_img)
         
         C, H, W = pre_img.shape
+        crop_coords = None
+        
+        # Class-aware cropping (before resize)
+        if self.crop_sampler is not None and sample.get('label_path'):
+            try:
+                raw_lbl = read_label(sample['label_path'])
+                if len(raw_lbl.shape) == 3:
+                    raw_lbl = raw_lbl[0]
+                cx, cy = self.crop_sampler.get_crop_center(raw_lbl, H, W)
+                crop_h = min(S, H)
+                crop_w = min(S, W)
+                y1 = max(0, cy - crop_h // 2)
+                y2 = min(H, y1 + crop_h)
+                x1 = max(0, cx - crop_w // 2)
+                x2 = min(W, x1 + crop_w)
+                crop_coords = (y1, y2, x1, x2)
+                pre_img = pre_img[:, y1:y2, x1:x2]
+                post_img = post_img[:, y1:y2, x1:x2]
+                C, H, W = pre_img.shape
+            except Exception:
+                pass
         
         # Resize to training size
         pre_pil = Image.fromarray(pre_img.transpose(1, 2, 0).astype(np.uint8))
@@ -481,20 +720,26 @@ class FullImageDataset(Dataset):
                     raw_lbl = read_label(sample['label_path'])
                     if len(raw_lbl.shape) == 3:
                         raw_lbl = raw_lbl[0]
-                    if H != S or W != S:
-                        raw_pil_aug = Image.fromarray(raw_lbl.astype(np.uint16))
-                        raw_resized_aug = np.array(raw_pil_aug.resize((S, S), Image.NEAREST))
-                    else:
-                        raw_resized_aug = raw_lbl
+                    # Apply same crop as images
+                    if crop_coords is not None:
+                        y1, y2, x1, x2 = crop_coords
+                        raw_lbl = raw_lbl[y1:y2, x1:x2]
+                    raw_pil_aug = Image.fromarray(raw_lbl.astype(np.uint16))
+                    raw_resized_aug = np.array(raw_pil_aug.resize((S, S), Image.NEAREST))
                     _, _, raw_pre_aug, raw_post_aug, _ = random_augment(
                         pre_img_np, post_img_np, raw_resized_aug, raw_resized_aug, None)
                     state_map = self._decode_state(raw_post_aug)
                 # Override for copy-paste regions
                 if cp_state_mask is not None:
                     cp_valid = cp_state_mask >= 0
+                    if state_map.shape != cp_state_mask.shape:
+                        cp_pil = Image.fromarray(cp_state_mask.astype(np.int64))
+                        cp_state_mask = np.array(cp_pil.resize((state_map.shape[1], state_map.shape[0]), Image.NEAREST))
+                        cp_valid = cp_state_mask >= 0
                     state_map[cp_valid] = cp_state_mask[cp_valid]
                 result['change_state'] = torch.from_numpy(state_map).long()
 
+            result['_crop_coords'] = crop_coords
             if boxes_aug is not None:
                 result['instance_boxes'] = boxes_aug
 
@@ -544,15 +789,41 @@ class FullImageDataset(Dataset):
 
 def create_dataloader(data_dir, config, split='train', batch_size=4,
                       num_workers=4, scenes=None, img_size=1024,
-                      boxes_dir=None):
+                      boxes_dir=None, pin_memory=True, state_aware=False,
+                      rare_class_oversample=False, rare_class_boost=50.0):
     dataset = FullImageDataset(
         data_dir=data_dir, config=config, split=split,
         scenes=scenes, img_size=img_size, boxes_dir=boxes_dir
     )
+    sampler = None
+    shuffle = (split == 'train')
+    if split == 'train':
+        if rare_class_oversample:
+            # Oversample rare classes (Bridge/Dock/Shelter)
+            weights = dataset._compute_rare_class_sampling_weights(
+                rare_class_ids=[4, 7, 10],  # Bridge, Shelter, Dock
+                boost=rare_class_boost
+            )
+            sampler = WeightedRandomSampler(
+                weights=torch.from_numpy(weights).double(),
+                num_samples=len(weights),
+                replacement=True
+            )
+            shuffle = False
+        elif state_aware:
+            # Original state-aware sampling
+            weights = dataset._compute_state_sampling_weights(
+                rare_states=[2, 4, 5], boost=10.0)
+            sampler = WeightedRandomSampler(
+                weights=torch.from_numpy(weights).double(),
+                num_samples=len(weights),
+                replacement=True
+            )
+            shuffle = False
     return DataLoader(
         dataset, batch_size=batch_size,
-        shuffle=(split == 'train'),
-        num_workers=num_workers, pin_memory=True,
+        shuffle=shuffle, sampler=sampler,
+        num_workers=num_workers, pin_memory=pin_memory,
         drop_last=(split == 'train'),
         collate_fn=FullImageDataset.collate_fn
     )
