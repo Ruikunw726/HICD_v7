@@ -159,12 +159,12 @@ def evaluate_bdd_protocol(pred_target, pred_state, gt_target, gt_state,
     # F_macro = arithmetic mean
     f1_macro = (f1_nd + f1_d) / 2
 
-    # SeK: compute on all valid pixels within gt_mask for this target
-    # Use full state predictions (not just binary changed/unchanged)
-    sek_valid_mask = gt_mask & (gt_state < 7) & (pred_state < 7)
+    # SeK: compute on target pixels only (exclude background target=15 and state=6/none)
+    # This reflects true change detection ability within target regions
+    sek_valid_mask = gt_mask & (gt_state < 6) & (pred_state < 6)  # 0-5 only, exclude none(6)
     if sek_valid_mask.sum() > 0:
         sek, iou1, iou2, rho_hat, eta_hat = compute_sek(
-            pred_state[sek_valid_mask], gt_state[sek_valid_mask], num_states=7
+            pred_state[sek_valid_mask], gt_state[sek_valid_mask], num_states=6
         )
     else:
         sek, iou1, iou2, rho_hat, eta_hat = float('nan'), float('nan'), float('nan'), float('nan'), float('nan')
@@ -199,8 +199,8 @@ TASKS = {
     },
     'T2_Surface': {
         'name': '地表覆盖变化',
-        'classes': [0, 1, 2, 3, 4, 5],
-        'class_names': ['Farmland', 'Runway', 'Taxiway', 'Apron', 'Bridge', 'Highway'],
+        'classes': [0, 1, 2, 3, 5],
+        'class_names': ['Farmland', 'Runway', 'Taxiway', 'Apron', 'Highway'],
     },
     'T3_Mobile': {
         'name': '移动目标变化',
@@ -209,8 +209,8 @@ TASKS = {
     },
     'T4_Facility': {
         'name': '设施变化',
-        'classes': [7, 9, 10, 11, 14],  # Shelter, Pier, Dock, Tank, Crater (Tower removed)
-        'class_names': ['Shelter', 'Pier', 'Dock', 'Tank', 'Crater'],
+        'classes': [4, 7, 9, 10, 11, 14],  # Shelter, Pier, Dock, Tank, Crater (Tower removed)
+        'class_names': ['Bridge', 'Shelter', 'Pier', 'Dock', 'Tank', 'Crater'],
     },
 }
 

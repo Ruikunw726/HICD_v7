@@ -1,0 +1,45 @@
+{
+  "all_model_tensors_equal": true,
+  "model_tensor_count": 162,
+  "local_sha256": "c70aebcfbe6ad4b504aadf274feb4eebaf9af6b649c66de6c6e1670c81810fc9",
+  "reference_sha256": "1f9ed8a2378d65e24bb710ba522ac9fa7be4e036d7aefb4384ce022833926332",
+  "source": "timm/vit_base_patch16_dinov3.lvd1689m",
+  "revision": "c6a5fb7d12bbd3cf3b0079253141c3332aaed7da",
+  "ignored_local_auxiliary_keys": [
+    "blocks.0.attn.q_bias",
+    "blocks.0.attn.v_bias",
+    "blocks.1.attn.q_bias",
+    "blocks.1.attn.v_bias",
+    "blocks.10.attn.q_bias",
+    "blocks.10.attn.v_bias",
+    "blocks.11.attn.q_bias",
+    "blocks.11.attn.v_bias",
+    "blocks.2.attn.q_bias",
+    "blocks.2.attn.v_bias",
+    "blocks.3.attn.q_bias",
+    "blocks.3.attn.v_bias",
+    "blocks.4.attn.q_bias",
+    "blocks.4.attn.v_bias",
+    "blocks.5.attn.q_bias",
+    "blocks.5.attn.v_bias",
+    "blocks.6.attn.q_bias",
+    "blocks.6.attn.v_bias",
+    "blocks.7.attn.q_bias",
+    "blocks.7.attn.v_bias",
+    "blocks.8.attn.q_bias",
+    "blocks.8.attn.v_bias",
+    "blocks.9.attn.q_bias",
+    "blocks.9.attn.v_bias"
+  ],
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "timm_version": "1.0.28"
+}

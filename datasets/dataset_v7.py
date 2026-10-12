@@ -69,10 +69,10 @@ def random_augment(img1, img2, label1, label2, boxes=None):
         if boxes is not None and len(boxes) > 0:
             boxes = boxes.clone()
             for _ in range(k):
-                new_cx = boxes[:, 1]
+                new_cx = boxes[:, 1].clone()
                 new_cy = 1.0 - boxes[:, 0]
-                new_w = boxes[:, 3]
-                new_h = boxes[:, 2]
+                new_w = boxes[:, 3].clone()
+                new_h = boxes[:, 2].clone()
                 boxes[:, 0] = new_cx
                 boxes[:, 1] = new_cy
                 boxes[:, 2] = new_w
@@ -163,15 +163,21 @@ def random_blur(img, p=0.2, kernel_range=(3, 7)):
     return blurred.astype(np.float32)
 
 
-def copy_paste_both_labels(img1, img2, label1, label2, p=0.3, target_classes=None, max_paste=3):
-    """Change-aware copy-paste for bi-temporal change detection.
-    Two modes: same position (no-change) and different position (creates change).
+def copy_paste_both_labels(img1, img2, label1, label2, p=0.3, target_classes=None, max_paste=3,
+                           state_map=None, background_class=15, legal_states=None):
+    """Paste a paired source object into paired background, retaining its state.
+
+    No state is invented from a random mode: both timestamps and their original
+    target/state supervision travel together. Farmland (0) is never a vacancy.
+    Without source states this augmentation is disabled rather than fabricating
+    damaged/replaced/added labels. Returns an explicit state override mask.
     """
-    if np.random.rand() > p or target_classes is None:
+    if np.random.rand() > p or target_classes is None or state_map is None:
         return img1, img2, label1, label2, None
     C, H, W = img1.shape
     n_paste = np.random.randint(1, max_paste + 1)
     state_mask = np.full((H, W), -1, dtype=np.int64)
+    updated_states = state_map.copy()
     for _ in range(n_paste):
         cls = np.random.choice(target_classes)
         mask = (label2 == cls)
@@ -189,46 +195,25 @@ def copy_paste_both_labels(img1, img2, label1, label2, p=0.3, target_classes=Non
         patch_h, patch_w = y2 - y1, x2 - x1
         if patch_h < 5 or patch_w < 5:
             continue
-        same_position = np.random.rand() < 0.5
-        if same_position:
-            dst_y = np.random.randint(0, H - patch_h + 1)
-            dst_x = np.random.randint(0, W - patch_w + 1)
-            dst_mask = label2[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w] == 0
-            if dst_mask.sum() < patch_h * patch_w * 0.3:
-                continue
-            src1 = img1[:, y1:y2, x1:x2].copy()
-            src2 = img2[:, y1:y2, x1:x2].copy()
-            for c in range(C):
-                img1[c, dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = src1[c, :patch_h, :patch_w][dst_mask]
-                img2[c, dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = src2[c, :patch_h, :patch_w][dst_mask]
-            label1[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = cls
-            label2[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = cls
-            state_mask[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = 0
-        else:
-            if np.random.rand() < 0.5:
-                dst_y = np.random.randint(0, H - patch_h + 1)
-                dst_x = np.random.randint(0, W - patch_w + 1)
-                dst_mask = label2[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w] == 0
-                if dst_mask.sum() < patch_h * patch_w * 0.3:
-                    continue
-                src2 = img2[:, y1:y2, x1:x2].copy()
-                for c in range(C):
-                    img2[c, dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = src2[c, :patch_h, :patch_w][dst_mask]
-                label2[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = cls
-                paste_state = np.random.choice([2, 3])  # reduced or added
-                state_mask[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = paste_state
-            else:
-                dst_y = np.random.randint(0, H - patch_h + 1)
-                dst_x = np.random.randint(0, W - patch_w + 1)
-                dst_mask = label1[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w] == 0
-                if dst_mask.sum() < patch_h * patch_w * 0.3:
-                    continue
-                src1 = img1[:, y1:y2, x1:x2].copy()
-                for c in range(C):
-                    img1[c, dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = src1[c, :patch_h, :patch_w][dst_mask]
-                label1[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = cls
-                paste_state = np.random.choice([1, 5])  # damaged or replaced
-                state_mask[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][dst_mask] = paste_state
+        dst_y = np.random.randint(0, H - patch_h + 1)
+        dst_x = np.random.randint(0, W - patch_w + 1)
+        source_mask = (label1[y1:y2, x1:x2] == cls) & (label2[y1:y2, x1:x2] == cls)
+        source_states = updated_states[y1:y2, x1:x2].copy()
+        allowed = (legal_states or {}).get(int(cls), range(6))
+        source_mask &= np.isin(source_states, list(allowed))
+        dst_slice = np.s_[dst_y:dst_y+patch_h, dst_x:dst_x+patch_w]
+        vacant = (label1[dst_slice] == background_class) & (label2[dst_slice] == background_class)
+        paste = source_mask & vacant
+        if not paste.any():
+            continue
+        src1 = img1[:, y1:y2, x1:x2].copy()
+        src2 = img2[:, y1:y2, x1:x2].copy()
+        img1[:, dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][:, paste] = src1[:, paste]
+        img2[:, dst_y:dst_y+patch_h, dst_x:dst_x+patch_w][:, paste] = src2[:, paste]
+        label1[dst_slice][paste] = cls
+        label2[dst_slice][paste] = cls
+        updated_states[dst_slice][paste] = source_states[paste]
+        state_mask[dst_slice][paste] = source_states[paste]
     return img1, img2, label1, label2, state_mask
 
 class FullImageDataset(Dataset):
@@ -353,6 +338,53 @@ class FullImageDataset(Dataset):
         """Load samples from names.txt, resolving image/label paths from source dirs."""
         with open(names_file) as f:
             names = [l.strip() for l in f if l.strip()]
+
+        catalog_path = os.path.join(self.data_dir, self.split, 'resolved_samples.json')
+        if os.path.isfile(catalog_path):
+            # Versioned clean views pin exact source files; never silently search
+            # siblings or substitute a differently labelled image on mismatch.
+            import hashlib
+            import re
+            manifest_path = os.path.join(self.data_dir, 'split_manifest.json')
+            with open(manifest_path, encoding='utf-8') as f:
+                manifest = json.load(f)
+            with open(catalog_path, 'rb') as f:
+                catalog_bytes = f.read()
+            if hashlib.sha256(catalog_bytes).hexdigest() != manifest['catalog_sha256'][self.split]:
+                raise ValueError('Resolved split catalog changed')
+            catalog = json.loads(catalog_bytes)
+            if catalog.get('schema_version') != 'hicd.resolved_split.v1' or catalog.get('split') != self.split:
+                raise ValueError('Unsupported or mismatched resolved split catalog')
+            with open(names_file, 'rb') as f:
+                names_hash = hashlib.sha256(f.read()).hexdigest()
+            if names_hash != catalog['names_sha256'] or names_hash != manifest['names_sha256'][self.split]:
+                raise ValueError('Clean split names changed')
+            records = {record['base_name']: record for record in catalog['samples']}
+            if len(names) != len(set(names)) or len(records) != len(catalog['samples']) or set(records) != set(names):
+                raise ValueError('Names/catalog membership is not unique and identical')
+            samples = []
+            allowed_root = os.path.normcase(os.path.abspath(os.path.dirname(self.data_dir)))
+            for name in names:
+                record = dict(records[name])
+                for key in ('pre_path', 'post_path', 'label_path'):
+                    value = record.get(key)
+                    if not isinstance(value, str) or not value:
+                        raise ValueError(f'Incomplete pinned source path: {name}/{key}')
+                    if os.name == 'nt':
+                        match = re.match(r'^/mnt/([a-zA-Z])/(.*)$', value)
+                        if match: value = match[1].upper() + ':/' + match[2]
+                    else:
+                        match = re.match(r'^([a-zA-Z]):[/\\](.*)$', value)
+                        if match: value = '/mnt/' + match[1].lower() + '/' + match[2].replace('\\', '/')
+                    if not os.path.isabs(value):
+                        raise ValueError('Pinned source path must be absolute')
+                    value = os.path.abspath(value)
+                    if os.path.commonpath((allowed_root, os.path.normcase(value))) != allowed_root:
+                        raise ValueError('Pinned source path escaped the data parent directory')
+                    record[key] = value
+                samples.append(record)
+            print(f'  [{self.split}] Loaded {len(samples)} pinned samples from clean split catalog')
+            return samples
         
         # Build path index once: map (split, filename) -> full path
         # Search self.data_dir and sibling dirs
@@ -594,7 +626,7 @@ class FullImageDataset(Dataset):
     
     def _decode_state(self, label):
         if self.state_decode_map:
-            decoded = np.zeros_like(label)
+            decoded = np.full(label.shape, 255, dtype=np.int64)
             for src, dst in self.state_decode_map.items():
                 decoded[label == src] = dst
             return decoded
@@ -603,7 +635,7 @@ class FullImageDataset(Dataset):
     def _decode_label(self, label):
         if self.label_decode_map is None:
             return label
-        decoded = np.zeros_like(label)
+        decoded = np.full(label.shape, 255, dtype=np.int64)
         for src, dst in self.label_decode_map.items():
             decoded[label == src] = dst
         return decoded
@@ -623,27 +655,31 @@ class FullImageDataset(Dataset):
                 self._img_cache[cache_key] = (pre_img, post_img)
         
         C, H, W = pre_img.shape
+        if post_img.shape != pre_img.shape:
+            raise ValueError(f'Paired image shape mismatch: {sample["base_name"]}')
         crop_coords = None
+        raw_label = None
+        if sample.get('label_path'):
+            raw_label = read_label(sample['label_path'])
+            if raw_label.ndim == 3:
+                raw_label = raw_label[0]
+            if raw_label.shape != (H, W):
+                raise ValueError(f'Image/label shape mismatch: {sample["base_name"]}')
         
         # Class-aware cropping (before resize)
-        if self.crop_sampler is not None and sample.get('label_path'):
-            try:
-                raw_lbl = read_label(sample['label_path'])
-                if len(raw_lbl.shape) == 3:
-                    raw_lbl = raw_lbl[0]
-                cx, cy = self.crop_sampler.get_crop_center(raw_lbl, H, W)
-                crop_h = min(S, H)
-                crop_w = min(S, W)
-                y1 = max(0, cy - crop_h // 2)
-                y2 = min(H, y1 + crop_h)
-                x1 = max(0, cx - crop_w // 2)
-                x2 = min(W, x1 + crop_w)
-                crop_coords = (y1, y2, x1, x2)
-                pre_img = pre_img[:, y1:y2, x1:x2]
-                post_img = post_img[:, y1:y2, x1:x2]
-                C, H, W = pre_img.shape
-            except Exception:
-                pass
+        if self.crop_sampler is not None and raw_label is not None and (H > S or W > S):
+            cx, cy = self.crop_sampler.get_crop_center(self._decode_label(raw_label), H, W)
+            crop_h = min(S, H)
+            crop_w = min(S, W)
+            y1 = min(max(0, cy - crop_h // 2), H - crop_h)
+            y2 = y1 + crop_h
+            x1 = min(max(0, cx - crop_w // 2), W - crop_w)
+            x2 = x1 + crop_w
+            crop_coords = (y1, y2, x1, x2)
+            pre_img = pre_img[:, y1:y2, x1:x2]
+            post_img = post_img[:, y1:y2, x1:x2]
+            raw_label = raw_label[y1:y2, x1:x2]
+            C, H, W = pre_img.shape
         
         # Resize to training size
         pre_pil = Image.fromarray(pre_img.transpose(1, 2, 0).astype(np.uint8))
@@ -662,37 +698,24 @@ class FullImageDataset(Dataset):
         }
         
         # Load label
-        if sample['label_path']:
-            try:
-                label = read_label(sample['label_path'])
-                if len(label.shape) == 3:
-                    label = label[0]
-                # Decode state from raw label BEFORE decoding target class
-                if self.state_decode_map is not None:
-                    if H != S or W != S:
-                        raw_pil = Image.fromarray(label.astype(np.uint16))
-                        raw_resized = np.array(raw_pil.resize((S, S), Image.NEAREST))
-                    else:
-                        raw_resized = label
-                    state_map = self._decode_state(raw_resized)
-                    result['change_state'] = torch.from_numpy(state_map).long()
-                label = self._decode_label(label)
-                lbl_pil = Image.fromarray(label.astype(np.uint8))
-                lbl_resized = np.array(lbl_pil.resize((S, S), Image.NEAREST))
-                result['label'] = torch.from_numpy(lbl_resized).long()
-            except Exception:
-                pass
+        if raw_label is not None:
+            raw_resized = np.array(Image.fromarray(raw_label.astype(np.int32)).resize((S, S), Image.NEAREST))
+            result['label'] = torch.from_numpy(self._decode_label(raw_resized).copy()).long()
+            if self.state_decode_map is not None:
+                result['change_state'] = torch.from_numpy(self._decode_state(raw_resized).copy()).long()
         
         # Data augmentation (training only)
         if self.augment and 'label' in result:
             pre_img_np = result['img_t1'].numpy()
             post_img_np = result['img_t2'].numpy()
             pre_lbl = result['label'].numpy()
-            post_lbl = pre_lbl.copy()
+            # One geometry draw for both images, target and state supervision.
+            state_map = result['change_state'].numpy()
             boxes_aug = result.get('instance_boxes', None)
 
-            pre_img_np, post_img_np, pre_lbl, post_lbl, boxes_aug = random_augment(
-                pre_img_np, post_img_np, pre_lbl, post_lbl, boxes_aug)
+            pre_img_np, post_img_np, pre_lbl, state_map, boxes_aug = random_augment(
+                pre_img_np, post_img_np, pre_lbl, state_map, boxes_aug)
+            post_lbl = pre_lbl.copy()
             pre_img_np = color_jitter(pre_img_np)
             post_img_np = color_jitter(post_img_np)
             pre_img_np = random_erasing(pre_img_np)
@@ -700,9 +723,17 @@ class FullImageDataset(Dataset):
 
             # Copy-paste rare classes
             rare_classes = [1, 2, 4, 7, 8, 9, 10, 12, 13, 14]
+            legal_states = {}
+            for raw, target in (self.label_decode_map or {}).items():
+                state = (self.state_decode_map or {}).get(raw, 255)
+                if target != 255 and 0 <= state < 6:
+                    legal_states.setdefault(target, set()).add(state)
+            target_names = self.config.get('pixel_target_names', self.config.get('target_names', []))
+            background_class = next((i for i, name in enumerate(target_names) if name.lower() == 'background'), None)
             pre_img_np, post_img_np, pre_lbl, post_lbl, cp_state_mask = copy_paste_both_labels(
                 pre_img_np, post_img_np, pre_lbl, post_lbl,
-                p=0.8, target_classes=rare_classes, max_paste=8)
+                p=0.8 if background_class is not None else 0.0, target_classes=rare_classes, max_paste=8,
+                state_map=state_map, background_class=background_class, legal_states=legal_states)
 
             pre_img_np = gaussian_noise(pre_img_np, p=0.3, std=0.03)
             post_img_np = gaussian_noise(post_img_np, p=0.3, std=0.03)
@@ -713,31 +744,10 @@ class FullImageDataset(Dataset):
             result['img_t2'] = torch.from_numpy(post_img_np.copy()).float()
             result['label'] = torch.from_numpy(post_lbl.copy()).long()
 
-            # Recompute state after augmentation
-            if 'change_state' in result:
-                state_map = result['change_state'].numpy()
-                if self.state_decode_map is not None:
-                    raw_lbl = read_label(sample['label_path'])
-                    if len(raw_lbl.shape) == 3:
-                        raw_lbl = raw_lbl[0]
-                    # Apply same crop as images
-                    if crop_coords is not None:
-                        y1, y2, x1, x2 = crop_coords
-                        raw_lbl = raw_lbl[y1:y2, x1:x2]
-                    raw_pil_aug = Image.fromarray(raw_lbl.astype(np.uint16))
-                    raw_resized_aug = np.array(raw_pil_aug.resize((S, S), Image.NEAREST))
-                    _, _, raw_pre_aug, raw_post_aug, _ = random_augment(
-                        pre_img_np, post_img_np, raw_resized_aug, raw_resized_aug, None)
-                    state_map = self._decode_state(raw_post_aug)
-                # Override for copy-paste regions
-                if cp_state_mask is not None:
-                    cp_valid = cp_state_mask >= 0
-                    if state_map.shape != cp_state_mask.shape:
-                        cp_pil = Image.fromarray(cp_state_mask.astype(np.int64))
-                        cp_state_mask = np.array(cp_pil.resize((state_map.shape[1], state_map.shape[0]), Image.NEAREST))
-                        cp_valid = cp_state_mask >= 0
-                    state_map[cp_valid] = cp_state_mask[cp_valid]
-                result['change_state'] = torch.from_numpy(state_map).long()
+            if cp_state_mask is not None:
+                cp_valid = cp_state_mask >= 0
+                state_map[cp_valid] = cp_state_mask[cp_valid]
+            result['change_state'] = torch.from_numpy(state_map.copy()).long()
 
             result['_crop_coords'] = crop_coords
             if boxes_aug is not None:

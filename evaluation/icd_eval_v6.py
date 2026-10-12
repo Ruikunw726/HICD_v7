@@ -231,12 +231,13 @@ class ICDEvaluatorV6:
 
         results = {}
 
-        # Global SeK: compute on all valid pixels (not per-class)
-        # Valid = GT state < 7 and pred state < 7 (exclude ignore/nan)
-        global_valid = (gt_state < 7) & (pred_state < 7) & (gt_target != 255)
+        # Global SeK: compute on target pixels only (exclude background)
+        # Exclude: background target(15), ignore(255), state=6(none)
+        # This reflects true change detection ability
+        global_valid = (gt_target != 15) & (gt_target != 255) & (gt_state < 6) & (pred_state < 6)
         if global_valid.sum() > 0:
             global_sek, g_iou1, g_iou2, g_rho, g_eta = compute_sek(
-                pred_state[global_valid], gt_state[global_valid], num_states=7
+                pred_state[global_valid], gt_state[global_valid], num_states=6
             )
             results['global_sek'] = float(global_sek) if not np.isnan(global_sek) else 0.0
             results['global_iou1'] = float(g_iou1) if not np.isnan(g_iou1) else 0.0

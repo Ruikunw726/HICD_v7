@@ -250,9 +250,12 @@ class DINOv3Backbone(nn.Module):
         print("DINOv3 backbone fully frozen")
     
     def unfreeze(self, ratio=1.0):
+        if not 0.0 <= ratio <= 1.0:
+            raise ValueError('unfreeze ratio must be between 0 and 1')
         all_params = list(self.parameters())
         num_to_unfreeze = int(len(all_params) * ratio)
-        for param in all_params[-num_to_unfreeze:]:
+        selected = all_params[-num_to_unfreeze:] if num_to_unfreeze else []
+        for param in selected:
             param.requires_grad = True
         print(f"Unfroze {num_to_unfreeze}/{len(all_params)} parameter groups")
     

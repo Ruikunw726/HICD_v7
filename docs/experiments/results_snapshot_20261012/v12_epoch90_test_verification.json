@@ -1,0 +1,157 @@
+{
+  "checked_at": "2026-10-11T16:41:53.216991+08:00",
+  "pass": true,
+  "samples": 13077,
+  "epoch": 90,
+  "counts_and_all_target_state_rows_recomputed": true,
+  "farmland_decoding_matches_raw_matrix": true,
+  "no_train_or_val_name_overlap": true,
+  "status_and_identity_verified": true,
+  "metric_file_sha256": "0a0d369c7e52451f25d3344c68378c5529a1174ac5f8215a18120bc86f0c8279",
+  "checkpoint_sha256": "dd8b2300c7f2f6208bea3af19be7bb8869d15f3e379a5c05b7b0695ced5be98e",
+  "gt_supported_joint_classes": 25,
+  "evaluable_joint_classes": 28,
+  "gt_supported_macro_DIAGNOSTIC_ONLY": 0.6968548963788183,
+  "validation_epoch90": {
+    "strict_joint_micro": {
+      "tp": 12274938,
+      "fp": 588070,
+      "fn": 2272467,
+      "support": 14547405,
+      "predicted_support": 12863008,
+      "precision": 0.9542820777224115,
+      "recall": 0.8437888406901437,
+      "f1": 0.895640499834862,
+      "evaluable": true
+    },
+    "strict_joint_macro_f1": 0.5782007805694767,
+    "tasks": {
+      "T1": {
+        "target_ids": [
+          6
+        ],
+        "target_names": [
+          "Building"
+        ],
+        "strict_joint_f1": 0.825335223374906,
+        "strict_joint_micro": {
+          "tp": 4190340,
+          "fp": 385707,
+          "fn": 1387887,
+          "support": 5578227,
+          "predicted_support": 4576047,
+          "precision": 0.9157117485899948,
+          "recall": 0.751195675615209,
+          "f1": 0.825335223374906,
+          "evaluable": true
+        },
+        "strict_joint_macro_f1": 0.7523365546500917,
+        "evaluable_joint_classes": 5
+      },
+      "T2": {
+        "target_ids": [
+          0,
+          1,
+          2,
+          3,
+          5
+        ],
+        "target_names": [
+          "Farmland",
+          "Runway",
+          "Taxiway",
+          "Apron",
+          "Highway"
+        ],
+        "strict_joint_f1": 0.9395697396895657,
+        "strict_joint_micro": {
+          "tp": 8035580,
+          "fp": 185580,
+          "fn": 848068,
+          "support": 8883648,
+          "predicted_support": 8221160,
+          "precision": 0.9774265432128799,
+          "recall": 0.9045360644636078,
+          "f1": 0.9395697396895657,
+          "evaluable": true
+        },
+        "strict_joint_macro_f1": 0.5939397975462246,
+        "evaluable_joint_classes": 14
+      },
+      "T3": {
+        "target_ids": [
+          12,
+          13
+        ],
+        "target_names": [
+          "Aircraft",
+          "Vessel"
+        ],
+        "strict_joint_f1": 0.6478249664642406,
+        "strict_joint_micro": {
+          "tp": 49018,
+          "fp": 16783,
+          "fn": 36512,
+          "support": 85530,
+          "predicted_support": 65801,
+          "precision": 0.7449430859713378,
+          "recall": 0.5731088506956623,
+          "f1": 0.6478249664642406,
+          "evaluable": true
+        },
+        "strict_joint_macro_f1": 0.4690982697617219,
+        "evaluable_joint_classes": 10
+      },
+      "T4": {
+        "target_ids": [
+          4,
+          7,
+          9,
+          10,
+          11,
+          14
+        ],
+        "target_names": [
+          "Bridge",
+          "Shelter",
+          "Pier",
+          "Dock",
+          "Tank",
+          "Crater"
+        ],
+        "strict_joint_f1": null,
+        "strict_joint_micro": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "support": 0,
+          "predicted_support": 0,
+          "precision": null,
+          "recall": null,
+          "f1": null,
+          "evaluable": false
+        },
+        "strict_joint_macro_f1": null,
+        "evaluable_joint_classes": 0
+      }
+    }
+  },
+  "evaluation_source_snapshot": [
+    {
+      "file": "eval_epoch50_strict_test.py",
+      "sha256": "066fcde527fa2dd205516b8a3cdbf1f385e2afb1756a673d8fd2de89bed4c22a"
+    },
+    {
+      "file": "farmland_semantics.py",
+      "sha256": "3b3ee79bd206661b36c191a118d9d166ef7433ca2f0b067a247f4cb98b4ae235"
+    },
+    {
+      "file": "strict_joint_evaluator.py",
+      "sha256": "4cb12e274f37693d4425776848dd16c9acd3ca6246a1c0319fd998875139c657"
+    },
+    {
+      "file": "strict_joint_protocol.py",
+      "sha256": "aff0c0bbf50a46c0662e16bbf4c72eafad262bcf156a59a56bb638cedcbd32cd"
+    }
+  ]
+}

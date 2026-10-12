@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-09T17:06:20.702838+08:00",
+  "canonical_source_names_restored": true,
+  "source_directory": "D:\\CD\\0617final_256_v2",
+  "versioned_directory": "D:\\CD\\0617final_256_v2_disjoint_20261009",
+  "counts": {
+    "train": 61029,
+    "val": 13077,
+    "test": 13077
+  },
+  "old_names_archived": "F:\\mambacd\\home\\HICD_v7\\datasets\\split_audits\\original_restored_20261009\\before",
+  "no_training_processes_at_transition": true,
+  "raw_images_weights_metrics_preserved": true
+}

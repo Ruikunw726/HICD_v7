@@ -173,14 +173,14 @@ class LabelStructure(nn.Module):
 
         Instead of setting invalid state logits to -inf (which kills gradients
         when target predictions are wrong early in training), apply a soft
-        multiplicative weight with a floor of 0.1 so gradients always flow.
+        probability prior with a floor of 0.1, added as log(weight) to logits.
         """
         target_probs = F.softmax(target_logits, dim=1)  # [B, T, H, W]
         validity = self.get_validity_score()  # [T, S] in [0, 1]
         weighted_validity = torch.einsum('bthw,ts->bshw', target_probs, validity)
         # Soft floor: min 0.1 so even invalid states get gradient signal
         soft_weight = 0.1 + 0.9 * weighted_validity
-        state_logits_weighted = state_logits * soft_weight
+        state_logits_weighted = state_logits + soft_weight.clamp_min(1e-6).log()
         return state_logits_weighted, validity
     
     def compute_contrastive_losses(self, target_logits, state_logits, target_gt, state_gt):
@@ -366,7 +366,9 @@ class HierarchicalConditionDecoder(nn.Module):
             target_probs = F.softmax(target_logits.detach(), dim=1)  # [B, T, H, W]
             soft_weight = torch.einsum('bthw,ts->bshw', target_probs, validity)
             soft_weight = 0.1 + 0.9 * soft_weight  # min 0.1 keeps gradient alive
-            state_logits = state_logits * soft_weight
+            # A probability prior is additive in logit space. Multiplication
+            # would increase a negative logit when the weight is small.
+            state_logits = state_logits + soft_weight.clamp_min(1e-6).log()
         
         return state_logits, features
 
@@ -597,7 +599,7 @@ class GNNLabelStructure(nn.Module):
         validity = self.get_validity_score()
         weighted_validity = torch.einsum('bthw,ts->bshw', target_probs, validity)
         soft_weight = 0.1 + 0.9 * weighted_validity
-        state_logits_weighted = state_logits * soft_weight
+        state_logits_weighted = state_logits + soft_weight.clamp_min(1e-6).log()
         return state_logits_weighted, validity
 
     def compute_contrastive_losses(self, target_logits, state_logits, target_gt, state_gt):

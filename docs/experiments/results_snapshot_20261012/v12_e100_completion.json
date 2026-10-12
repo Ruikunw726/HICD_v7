@@ -1,0 +1,1721 @@
+{
+  "observed_at": "2026-10-11T16:27:20.790102+08:00",
+  "experiment": "v12_strict_joint_t123_disjoint_e100_20261009",
+  "status": [
+    "STARTED 2026-10-09T17:11:55+08:00",
+    "FINISHED 2026-10-11T06:13:10+08:00 python_exit=0 tee_exit=0"
+  ],
+  "run_identity": "d1584ee10d43b2df6e2b2e6922535cb2451a9f44941bedd8bcb23dba4ea93d75",
+  "data_split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+  "manifest_sha256": "3953134fe34be7b228a2ee8fcad32701d4587b982b0b0d4170b84b9cc23b47a0",
+  "protocol_version": "hicd.strict_joint.v1",
+  "prediction_semantics_version": "hicd.predicted_farmland_nochange.v1",
+  "list_counts": {
+    "train": 61029,
+    "val": 13077,
+    "test": 13077
+  },
+  "args": {
+    "dataset": "0617final_t123_disjoint_20261009",
+    "data_dir": "/mnt/d/CD/0617final_256_v2_disjoint_20261009",
+    "scenes": null,
+    "boxes_dir": null,
+    "config_dir": "datasets/configs",
+    "img_size": 256,
+    "backbone": "L1",
+    "backbone_type": "dinov3",
+    "pretrained_weight_path": "/mnt/f/mambacd/home/HICD_v7/weights/model.safetensors",
+    "hidden_dim": 128,
+    "embed_dim": 64,
+    "batch_size": 32,
+    "max_epochs": 100,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "grad_accum": 1,
+    "use_amp": true,
+    "num_workers": 4,
+    "freeze_backbone_epochs": 0,
+    "unfreeze_ratio": 0.5,
+    "w_pixel": 1.0,
+    "w_state": 2.0,
+    "w_consistency": 0.3,
+    "pixel_class_weights": null,
+    "state_pixel_weights": null,
+    "w_state_pixel": 1.0,
+    "w_contrastive": 0.05,
+    "state_aware": true,
+    "rare_class_oversample": false,
+    "rare_class_boost": 50.0,
+    "save_dir": "checkpoints",
+    "exp_name": "v12_strict_joint_t123_disjoint_e100_20261009",
+    "save_interval": 10,
+    "log_interval": 50,
+    "resume": null
+  },
+  "primary_selection": "validation.all_foreground.strict_joint_f1_micro",
+  "secondary_selection": "validation.all_foreground.strict_joint_f1_macro",
+  "best_micro": {
+    "epoch": 90,
+    "micro": {
+      "tp": 12274938,
+      "fp": 588070,
+      "fn": 2272467,
+      "support": 14547405,
+      "predicted_support": 12863008,
+      "precision": 0.9542820777224115,
+      "recall": 0.8437888406901437,
+      "f1": 0.895640499834862,
+      "evaluable": true
+    },
+    "macro_f1": 0.5782007805694767,
+    "evaluable_joint_classes": 29,
+    "gt_supported_joint_classes": 26,
+    "gt_supported_macro_f1_DIAGNOSTIC_ONLY": 0.6449162552505701,
+    "tasks": {
+      "T1": {
+        "micro_f1": 0.825335223374906,
+        "macro_f1": 0.7523365546500917
+      },
+      "T2": {
+        "micro_f1": 0.9395697396895657,
+        "macro_f1": 0.5939397975462246
+      },
+      "T3": {
+        "micro_f1": 0.6478249664642406,
+        "macro_f1": 0.4690982697617219
+      },
+      "T4": {
+        "micro_f1": null,
+        "macro_f1": null
+      }
+    },
+    "per_target": {
+      "Farmland": {
+        "tp": 6781542,
+        "fp": 97512,
+        "fn": 611718,
+        "support": 7393260,
+        "predicted_support": 6879054,
+        "precision": 0.9858247950953721,
+        "recall": 0.9172600449598689,
+        "f1": 0.9503072872415783,
+        "evaluable": true
+      },
+      "Runway": {
+        "tp": 424573,
+        "fp": 7130,
+        "fn": 15477,
+        "support": 440050,
+        "predicted_support": 431703,
+        "precision": 0.9834840156311168,
+        "recall": 0.96482899670492,
+        "f1": 0.9740671956391317,
+        "evaluable": true
+      },
+      "Taxiway": {
+        "tp": 237686,
+        "fp": 14032,
+        "fn": 29047,
+        "support": 266733,
+        "predicted_support": 251718,
+        "precision": 0.9442550790964492,
+        "recall": 0.8911008386663818,
+        "f1": 0.9169082516959173,
+        "evaluable": true
+      },
+      "Apron": {
+        "tp": 400343,
+        "fp": 44937,
+        "fn": 65473,
+        "support": 465816,
+        "predicted_support": 445280,
+        "precision": 0.8990814768235716,
+        "recall": 0.8594445016916551,
+        "f1": 0.8788162828066417,
+        "evaluable": true
+      },
+      "Highway": {
+        "tp": 191436,
+        "fp": 21969,
+        "fn": 126353,
+        "support": 317789,
+        "predicted_support": 213405,
+        "precision": 0.8970548956210023,
+        "recall": 0.6023997054649469,
+        "f1": 0.7207762135867498,
+        "evaluable": true
+      },
+      "Building": {
+        "tp": 4190340,
+        "fp": 385707,
+        "fn": 1387887,
+        "support": 5578227,
+        "predicted_support": 4576047,
+        "precision": 0.9157117485899948,
+        "recall": 0.751195675615209,
+        "f1": 0.825335223374906,
+        "evaluable": true
+      },
+      "Aircraft": {
+        "tp": 17043,
+        "fp": 5556,
+        "fn": 11242,
+        "support": 28285,
+        "predicted_support": 22599,
+        "precision": 0.7541484136466216,
+        "recall": 0.602545518826233,
+        "f1": 0.6698765820297147,
+        "evaluable": true
+      },
+      "Vessel": {
+        "tp": 31975,
+        "fp": 11227,
+        "fn": 25270,
+        "support": 57245,
+        "predicted_support": 43202,
+        "precision": 0.7401277718624137,
+        "recall": 0.5585640667307188,
+        "f1": 0.6366541559230241,
+        "evaluable": true
+      }
+    },
+    "rare_states": [
+      {
+        "joint_id": 89,
+        "target_id": 12,
+        "target_name": "Aircraft",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 47,
+        "fp": 22,
+        "fn": 647,
+        "support": 694,
+        "predicted_support": 69,
+        "precision": 0.6811594202898551,
+        "recall": 0.06772334293948126,
+        "f1": 0.12319790301441677,
+        "evaluable": true
+      },
+      {
+        "joint_id": 96,
+        "target_id": 13,
+        "target_name": "Vessel",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 179,
+        "fp": 1271,
+        "fn": 5778,
+        "support": 5957,
+        "predicted_support": 1450,
+        "precision": 0.12344827586206897,
+        "recall": 0.030048682222595265,
+        "f1": 0.04833265829620629,
+        "evaluable": true
+      }
+    ],
+    "train_loss": 0.8533398392441764,
+    "validation_loss": 1.2964884684965343,
+    "train_micro_f1": 0.9118728462072602,
+    "train_macro_f1": 0.7598429744262616
+  },
+  "best_macro": {
+    "epoch": 56,
+    "micro": {
+      "tp": 12125249,
+      "fp": 651816,
+      "fn": 2422156,
+      "support": 14547405,
+      "predicted_support": 12777065,
+      "precision": 0.948985467319764,
+      "recall": 0.8334991017298274,
+      "f1": 0.8875011299395743,
+      "evaluable": true
+    },
+    "macro_f1": 0.6226105183775097,
+    "evaluable_joint_classes": 27,
+    "gt_supported_joint_classes": 26,
+    "gt_supported_macro_f1_DIAGNOSTIC_ONLY": 0.6465570767766449,
+    "tasks": {
+      "T1": {
+        "micro_f1": 0.8182102018717871,
+        "macro_f1": 0.7385176137897158
+      },
+      "T2": {
+        "micro_f1": 0.9310162489601078,
+        "macro_f1": 0.6889536226370443
+      },
+      "T3": {
+        "micro_f1": 0.6381178993934113,
+        "macro_f1": 0.4850452455599655
+      },
+      "T4": {
+        "micro_f1": null,
+        "macro_f1": null
+      }
+    },
+    "per_target": {
+      "Farmland": {
+        "tp": 6670580,
+        "fp": 107848,
+        "fn": 722680,
+        "support": 7393260,
+        "predicted_support": 6778428,
+        "precision": 0.9840895263621595,
+        "recall": 0.9022515101592532,
+        "f1": 0.9413952663931071,
+        "evaluable": true
+      },
+      "Runway": {
+        "tp": 421456,
+        "fp": 5280,
+        "fn": 18594,
+        "support": 440050,
+        "predicted_support": 426736,
+        "precision": 0.9876270106107757,
+        "recall": 0.9577457107146915,
+        "f1": 0.9724568694002903,
+        "evaluable": true
+      },
+      "Taxiway": {
+        "tp": 252453,
+        "fp": 32991,
+        "fn": 14280,
+        "support": 266733,
+        "predicted_support": 285444,
+        "precision": 0.8844221633665448,
+        "recall": 0.9464633172498341,
+        "f1": 0.9143915809604529,
+        "evaluable": true
+      },
+      "Apron": {
+        "tp": 392681,
+        "fp": 38928,
+        "fn": 73135,
+        "support": 465816,
+        "predicted_support": 431609,
+        "precision": 0.9098072561044834,
+        "recall": 0.8429959468974875,
+        "f1": 0.8751282837005878,
+        "evaluable": true
+      },
+      "Highway": {
+        "tp": 186801,
+        "fp": 29531,
+        "fn": 130988,
+        "support": 317789,
+        "predicted_support": 216332,
+        "precision": 0.8634922249135588,
+        "recall": 0.5878145561992392,
+        "f1": 0.6994707191816086,
+        "evaluable": true
+      },
+      "Building": {
+        "tp": 4153676,
+        "fp": 421175,
+        "fn": 1424551,
+        "support": 5578227,
+        "predicted_support": 4574851,
+        "precision": 0.9079368923709209,
+        "recall": 0.744622977874511,
+        "f1": 0.8182102018717871,
+        "evaluable": true
+      },
+      "Aircraft": {
+        "tp": 16264,
+        "fp": 6848,
+        "fn": 12021,
+        "support": 28285,
+        "predicted_support": 23112,
+        "precision": 0.7037037037037037,
+        "recall": 0.5750044193035178,
+        "f1": 0.632877405296029,
+        "evaluable": true
+      },
+      "Vessel": {
+        "tp": 31338,
+        "fp": 9215,
+        "fn": 25907,
+        "support": 57245,
+        "predicted_support": 40553,
+        "precision": 0.7727665030947155,
+        "recall": 0.5474364573325181,
+        "f1": 0.6408720014724227,
+        "evaluable": true
+      }
+    },
+    "rare_states": [
+      {
+        "joint_id": 89,
+        "target_id": 12,
+        "target_name": "Aircraft",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 113,
+        "fp": 203,
+        "fn": 581,
+        "support": 694,
+        "predicted_support": 316,
+        "precision": 0.3575949367088608,
+        "recall": 0.1628242074927954,
+        "f1": 0.22376237623762377,
+        "evaluable": true
+      },
+      {
+        "joint_id": 96,
+        "target_id": 13,
+        "target_name": "Vessel",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 862,
+        "fp": 1221,
+        "fn": 5095,
+        "support": 5957,
+        "predicted_support": 2083,
+        "precision": 0.41382621219395105,
+        "recall": 0.14470370992110124,
+        "f1": 0.21442786069651742,
+        "evaluable": true
+      }
+    ],
+    "train_loss": 0.8835597390208372,
+    "validation_loss": 1.335424785600169,
+    "train_micro_f1": 0.9001639156936617,
+    "train_macro_f1": 0.7132327440900255
+  },
+  "epoch50": {
+    "epoch": 50,
+    "micro": {
+      "tp": 11874191,
+      "fp": 579504,
+      "fn": 2673214,
+      "support": 14547405,
+      "predicted_support": 12453695,
+      "precision": 0.9534673042819821,
+      "recall": 0.8162411784094826,
+      "f1": 0.8795338708422991,
+      "evaluable": true
+    },
+    "macro_f1": 0.5928851103381544,
+    "evaluable_joint_classes": 28,
+    "gt_supported_joint_classes": 26,
+    "gt_supported_macro_f1_DIAGNOSTIC_ONLY": 0.6384916572872432,
+    "tasks": {
+      "T1": {
+        "micro_f1": 0.7973596832285105,
+        "macro_f1": 0.7240870220551755
+      },
+      "T2": {
+        "micro_f1": 0.9293189786254025,
+        "macro_f1": 0.6357485292620522
+      },
+      "T3": {
+        "micro_f1": 0.6464151688722102,
+        "macro_f1": 0.47156170987857654
+      },
+      "T4": {
+        "micro_f1": null,
+        "macro_f1": null
+      }
+    },
+    "per_target": {
+      "Farmland": {
+        "tp": 6656655,
+        "fp": 114415,
+        "fn": 736605,
+        "support": 7393260,
+        "predicted_support": 6771070,
+        "precision": 0.9831023752523604,
+        "recall": 0.900368037915615,
+        "f1": 0.9399180900190831,
+        "evaluable": true
+      },
+      "Runway": {
+        "tp": 426114,
+        "fp": 13336,
+        "fn": 13936,
+        "support": 440050,
+        "predicted_support": 439450,
+        "precision": 0.9696529753100467,
+        "recall": 0.9683308714918759,
+        "f1": 0.9689914724275156,
+        "evaluable": true
+      },
+      "Taxiway": {
+        "tp": 237317,
+        "fp": 14485,
+        "fn": 29416,
+        "support": 266733,
+        "predicted_support": 251802,
+        "precision": 0.9424746427748787,
+        "recall": 0.8897174327885938,
+        "f1": 0.9153364768048444,
+        "evaluable": true
+      },
+      "Apron": {
+        "tp": 388461,
+        "fp": 40903,
+        "fn": 77355,
+        "support": 465816,
+        "predicted_support": 429364,
+        "precision": 0.9047358418498057,
+        "recall": 0.8339365758153434,
+        "f1": 0.8678947250832235,
+        "evaluable": true
+      },
+      "Highway": {
+        "tp": 185074,
+        "fp": 27561,
+        "fn": 132715,
+        "support": 317789,
+        "predicted_support": 212635,
+        "precision": 0.8703835210572107,
+        "recall": 0.5823801327295784,
+        "f1": 0.6978341854818032,
+        "evaluable": true
+      },
+      "Building": {
+        "tp": 3931478,
+        "fp": 351536,
+        "fn": 1646749,
+        "support": 5578227,
+        "predicted_support": 4283014,
+        "precision": 0.9179232194898266,
+        "recall": 0.704789891124904,
+        "f1": 0.7973596832285105,
+        "evaluable": true
+      },
+      "Aircraft": {
+        "tp": 18301,
+        "fp": 5968,
+        "fn": 9984,
+        "support": 28285,
+        "predicted_support": 24269,
+        "precision": 0.7540895792986938,
+        "recall": 0.647021389429026,
+        "f1": 0.696464588803897,
+        "evaluable": true
+      },
+      "Vessel": {
+        "tp": 30791,
+        "fp": 11300,
+        "fn": 26454,
+        "support": 57245,
+        "predicted_support": 42091,
+        "precision": 0.7315340571618636,
+        "recall": 0.5378810376452092,
+        "f1": 0.6199363775469114,
+        "evaluable": true
+      }
+    },
+    "rare_states": [
+      {
+        "joint_id": 89,
+        "target_id": 12,
+        "target_name": "Aircraft",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 45,
+        "fp": 101,
+        "fn": 649,
+        "support": 694,
+        "predicted_support": 146,
+        "precision": 0.3082191780821918,
+        "recall": 0.06484149855907781,
+        "f1": 0.10714285714285714,
+        "evaluable": true
+      },
+      {
+        "joint_id": 96,
+        "target_id": 13,
+        "target_name": "Vessel",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 437,
+        "fp": 2210,
+        "fn": 5520,
+        "support": 5957,
+        "predicted_support": 2647,
+        "precision": 0.1650925576123914,
+        "recall": 0.07335907335907337,
+        "f1": 0.10158066015806602,
+        "evaluable": true
+      }
+    ],
+    "train_loss": 0.8944891604942118,
+    "validation_loss": 1.3219859401870764,
+    "train_micro_f1": 0.8967304861772601,
+    "train_macro_f1": 0.710466574461113
+  },
+  "epoch100": {
+    "epoch": 100,
+    "micro": {
+      "tp": 12218640,
+      "fp": 559739,
+      "fn": 2328765,
+      "support": 14547405,
+      "predicted_support": 12778379,
+      "precision": 0.9561964001850313,
+      "recall": 0.8399188721287405,
+      "f1": 0.8942938288614153,
+      "evaluable": true
+    },
+    "macro_f1": 0.5780676742646743,
+    "evaluable_joint_classes": 29,
+    "gt_supported_joint_classes": 26,
+    "gt_supported_macro_f1_DIAGNOSTIC_ONLY": 0.6447677905259829,
+    "tasks": {
+      "T1": {
+        "micro_f1": 0.8212818747883126,
+        "macro_f1": 0.7496910021976457
+      },
+      "T2": {
+        "micro_f1": 0.9394593161357572,
+        "macro_f1": 0.5952102591484094
+      },
+      "T3": {
+        "micro_f1": 0.6445628629519874,
+        "macro_f1": 0.46825639146095915
+      },
+      "T4": {
+        "micro_f1": null,
+        "macro_f1": null
+      }
+    },
+    "per_target": {
+      "Farmland": {
+        "tp": 6784128,
+        "fp": 102941,
+        "fn": 609132,
+        "support": 7393260,
+        "predicted_support": 6887069,
+        "precision": 0.9850530029537965,
+        "recall": 0.9176098230009495,
+        "f1": 0.9501360928029039,
+        "evaluable": true
+      },
+      "Runway": {
+        "tp": 421830,
+        "fp": 4924,
+        "fn": 18220,
+        "support": 440050,
+        "predicted_support": 426754,
+        "precision": 0.9884617367382614,
+        "recall": 0.9585956141347575,
+        "f1": 0.9732996155993743,
+        "evaluable": true
+      },
+      "Taxiway": {
+        "tp": 241258,
+        "fp": 17637,
+        "fn": 25475,
+        "support": 266733,
+        "predicted_support": 258895,
+        "precision": 0.9318758570076672,
+        "recall": 0.9044925074887622,
+        "f1": 0.9179800162852816,
+        "evaluable": true
+      },
+      "Apron": {
+        "tp": 397496,
+        "fp": 41927,
+        "fn": 68320,
+        "support": 465816,
+        "predicted_support": 439423,
+        "precision": 0.904586241503062,
+        "recall": 0.8533326463668057,
+        "f1": 0.8782122732228727,
+        "evaluable": true
+      },
+      "Highway": {
+        "tp": 191128,
+        "fp": 20455,
+        "fn": 126661,
+        "support": 317789,
+        "predicted_support": 211583,
+        "precision": 0.9033239910578827,
+        "recall": 0.601430508922587,
+        "f1": 0.7220933483448312,
+        "evaluable": true
+      },
+      "Building": {
+        "tp": 4134296,
+        "fp": 355387,
+        "fn": 1443931,
+        "support": 5578227,
+        "predicted_support": 4489683,
+        "precision": 0.9208436319446162,
+        "recall": 0.7411487556888595,
+        "f1": 0.8212818747883126,
+        "evaluable": true
+      },
+      "Aircraft": {
+        "tp": 17401,
+        "fp": 5260,
+        "fn": 10884,
+        "support": 28285,
+        "predicted_support": 22661,
+        "precision": 0.7678831472574026,
+        "recall": 0.6152024041011137,
+        "f1": 0.6831154555804185,
+        "evaluable": true
+      },
+      "Vessel": {
+        "tp": 31103,
+        "fp": 11208,
+        "fn": 26142,
+        "support": 57245,
+        "predicted_support": 42311,
+        "precision": 0.7351043463874642,
+        "recall": 0.543331295309634,
+        "f1": 0.6248342641327495,
+        "evaluable": true
+      }
+    },
+    "rare_states": [
+      {
+        "joint_id": 89,
+        "target_id": 12,
+        "target_name": "Aircraft",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 26,
+        "fp": 0,
+        "fn": 668,
+        "support": 694,
+        "predicted_support": 26,
+        "precision": 1.0,
+        "recall": 0.037463976945244955,
+        "f1": 0.07222222222222222,
+        "evaluable": true
+      },
+      {
+        "joint_id": 96,
+        "target_id": 13,
+        "target_name": "Vessel",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 163,
+        "fp": 1312,
+        "fn": 5794,
+        "support": 5957,
+        "predicted_support": 1475,
+        "precision": 0.11050847457627119,
+        "recall": 0.027362766493201275,
+        "f1": 0.04386437029063509,
+        "evaluable": true
+      }
+    ],
+    "train_loss": 0.8486165818457961,
+    "validation_loss": 1.2801047280740476,
+    "train_micro_f1": 0.912741365723019,
+    "train_macro_f1": 0.76320537583682
+  },
+  "first50_best_micro": {
+    "epoch": 49,
+    "micro": {
+      "tp": 12079199,
+      "fp": 650780,
+      "fn": 2468206,
+      "support": 14547405,
+      "predicted_support": 12729979,
+      "precision": 0.9488781560440909,
+      "recall": 0.8303335887053396,
+      "f1": 0.8856567037366926,
+      "evaluable": true
+    },
+    "macro_f1": 0.5654801604439256,
+    "evaluable_joint_classes": 29,
+    "gt_supported_joint_classes": 26,
+    "gt_supported_macro_f1_DIAGNOSTIC_ONLY": 0.6307278712643785,
+    "tasks": {
+      "T1": {
+        "micro_f1": 0.8124531474334344,
+        "macro_f1": 0.7182906283293787
+      },
+      "T2": {
+        "micro_f1": 0.9314864182210936,
+        "macro_f1": 0.5889290498258833
+      },
+      "T3": {
+        "micro_f1": 0.6102013877136572,
+        "macro_f1": 0.45624648136645823
+      },
+      "T4": {
+        "micro_f1": null,
+        "macro_f1": null
+      }
+    },
+    "per_target": {
+      "Farmland": {
+        "tp": 6701341,
+        "fp": 122059,
+        "fn": 691919,
+        "support": 7393260,
+        "predicted_support": 6823400,
+        "precision": 0.9821117038426591,
+        "recall": 0.9064121916448225,
+        "f1": 0.9427447797161921,
+        "evaluable": true
+      },
+      "Runway": {
+        "tp": 426789,
+        "fp": 12082,
+        "fn": 13261,
+        "support": 440050,
+        "predicted_support": 438871,
+        "precision": 0.9724702703072201,
+        "recall": 0.9698647880922623,
+        "f1": 0.9711657816800372,
+        "evaluable": true
+      },
+      "Taxiway": {
+        "tp": 232925,
+        "fp": 12174,
+        "fn": 33808,
+        "support": 266733,
+        "predicted_support": 245099,
+        "precision": 0.9503302747053232,
+        "recall": 0.8732515286822403,
+        "f1": 0.9101619281326685,
+        "evaluable": true
+      },
+      "Apron": {
+        "tp": 394143,
+        "fp": 47996,
+        "fn": 71673,
+        "support": 465816,
+        "predicted_support": 442139,
+        "precision": 0.8914459027590871,
+        "recall": 0.8461345252202587,
+        "f1": 0.868199415169254,
+        "evaluable": true
+      },
+      "Highway": {
+        "tp": 174619,
+        "fp": 18381,
+        "fn": 143170,
+        "support": 317789,
+        "predicted_support": 193000,
+        "precision": 0.9047616580310881,
+        "recall": 0.5494809449036939,
+        "f1": 0.6837226330245952,
+        "evaluable": true
+      },
+      "Building": {
+        "tp": 4104311,
+        "fp": 420964,
+        "fn": 1473916,
+        "support": 5578227,
+        "predicted_support": 4525275,
+        "precision": 0.9069749352249311,
+        "recall": 0.7357733917963539,
+        "f1": 0.8124531474334344,
+        "evaluable": true
+      },
+      "Aircraft": {
+        "tp": 17582,
+        "fp": 6587,
+        "fn": 10703,
+        "support": 28285,
+        "predicted_support": 24169,
+        "precision": 0.7274607968885762,
+        "recall": 0.6216015555948382,
+        "f1": 0.6703778548823731,
+        "evaluable": true
+      },
+      "Vessel": {
+        "tp": 27489,
+        "fp": 10537,
+        "fn": 29756,
+        "support": 57245,
+        "predicted_support": 38026,
+        "precision": 0.7229001209698628,
+        "recall": 0.48019914403004627,
+        "f1": 0.5770696224454451,
+        "evaluable": true
+      }
+    },
+    "rare_states": [
+      {
+        "joint_id": 89,
+        "target_id": 12,
+        "target_name": "Aircraft",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 93,
+        "fp": 80,
+        "fn": 601,
+        "support": 694,
+        "predicted_support": 173,
+        "precision": 0.5375722543352601,
+        "recall": 0.1340057636887608,
+        "f1": 0.21453287197231835,
+        "evaluable": true
+      },
+      {
+        "joint_id": 96,
+        "target_id": 13,
+        "target_name": "Vessel",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 494,
+        "fp": 2006,
+        "fn": 5463,
+        "support": 5957,
+        "predicted_support": 2500,
+        "precision": 0.1976,
+        "recall": 0.08292764814503945,
+        "f1": 0.1168262977415159,
+        "evaluable": true
+      }
+    ],
+    "train_loss": 0.8980838084445928,
+    "validation_loss": 1.348951730121173,
+    "train_micro_f1": 0.8959069140445096,
+    "train_macro_f1": 0.7147539739841561
+  },
+  "first50_best_macro": {
+    "epoch": 39,
+    "micro": {
+      "tp": 11826176,
+      "fp": 600213,
+      "fn": 2721229,
+      "support": 14547405,
+      "predicted_support": 12426389,
+      "precision": 0.9516985183708638,
+      "recall": 0.8129405897477935,
+      "f1": 0.8768641148516223,
+      "evaluable": true
+    },
+    "macro_f1": 0.6025228321513919,
+    "evaluable_joint_classes": 27,
+    "gt_supported_joint_classes": 26,
+    "gt_supported_macro_f1_DIAGNOSTIC_ONLY": 0.6256967872341377,
+    "tasks": {
+      "T1": {
+        "micro_f1": 0.7988523598833208,
+        "macro_f1": 0.7116248581044344
+      },
+      "T2": {
+        "micro_f1": 0.9252054817299423,
+        "macro_f1": 0.6582955902277151
+      },
+      "T3": {
+        "micro_f1": 0.645466802591338,
+        "macro_f1": 0.4810445094832828
+      },
+      "T4": {
+        "micro_f1": null,
+        "macro_f1": null
+      }
+    },
+    "per_target": {
+      "Farmland": {
+        "tp": 6599095,
+        "fp": 90868,
+        "fn": 794165,
+        "support": 7393260,
+        "predicted_support": 6689963,
+        "precision": 0.9864172641911473,
+        "recall": 0.8925825684474779,
+        "f1": 0.9371569277856354,
+        "evaluable": true
+      },
+      "Runway": {
+        "tp": 422624,
+        "fp": 11048,
+        "fn": 17426,
+        "support": 440050,
+        "predicted_support": 433672,
+        "precision": 0.9745245254478039,
+        "recall": 0.9603999545506192,
+        "f1": 0.9674106866943948,
+        "evaluable": true
+      },
+      "Taxiway": {
+        "tp": 227007,
+        "fp": 10186,
+        "fn": 39726,
+        "support": 266733,
+        "predicted_support": 237193,
+        "precision": 0.9570560682650837,
+        "recall": 0.8510645476937612,
+        "f1": 0.9009537114576347,
+        "evaluable": true
+      },
+      "Apron": {
+        "tp": 374979,
+        "fp": 30562,
+        "fn": 90837,
+        "support": 465816,
+        "predicted_support": 405541,
+        "precision": 0.9246389390961703,
+        "recall": 0.804993817301252,
+        "f1": 0.8606782294742569,
+        "evaluable": true
+      },
+      "Highway": {
+        "tp": 165822,
+        "fp": 22641,
+        "fn": 151967,
+        "support": 317789,
+        "predicted_support": 188463,
+        "precision": 0.8798650132917336,
+        "recall": 0.5217990553480454,
+        "f1": 0.6550966712230273,
+        "evaluable": true
+      },
+      "Building": {
+        "tp": 3987579,
+        "fp": 417463,
+        "fn": 1590648,
+        "support": 5578227,
+        "predicted_support": 4405042,
+        "precision": 0.9052306425228182,
+        "recall": 0.7148470293517994,
+        "f1": 0.7988523598833208,
+        "evaluable": true
+      },
+      "Aircraft": {
+        "tp": 16198,
+        "fp": 5308,
+        "fn": 12087,
+        "support": 28285,
+        "predicted_support": 21506,
+        "precision": 0.7531851576304287,
+        "recall": 0.5726710270461375,
+        "f1": 0.6506396738366371,
+        "evaluable": true
+      },
+      "Vessel": {
+        "tp": 32872,
+        "fp": 12137,
+        "fn": 24373,
+        "support": 57245,
+        "predicted_support": 45009,
+        "precision": 0.7303428203248239,
+        "recall": 0.5742335575159403,
+        "f1": 0.6429479531363076,
+        "evaluable": true
+      }
+    },
+    "rare_states": [
+      {
+        "joint_id": 89,
+        "target_id": 12,
+        "target_name": "Aircraft",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 78,
+        "fp": 87,
+        "fn": 616,
+        "support": 694,
+        "predicted_support": 165,
+        "precision": 0.4727272727272727,
+        "recall": 0.11239193083573487,
+        "f1": 0.18160651920838183,
+        "evaluable": true
+      },
+      {
+        "joint_id": 96,
+        "target_id": 13,
+        "target_name": "Vessel",
+        "state_id": 5,
+        "state_name": "replaced",
+        "tp": 128,
+        "fp": 1125,
+        "fn": 5829,
+        "support": 5957,
+        "predicted_support": 1253,
+        "precision": 0.10215482841181166,
+        "recall": 0.02148732583515192,
+        "f1": 0.03550624133148405,
+        "evaluable": true
+      }
+    ],
+    "train_loss": 0.9238251288273476,
+    "validation_loss": 1.4016309011281265,
+    "train_micro_f1": 0.8873268849105014,
+    "train_macro_f1": 0.6787936389227056
+  },
+  "last10_range": {
+    "strict_joint_f1": [
+      0.8931315537777729,
+      0.8952673071668255
+    ],
+    "strict_joint_macro_f1": [
+      0.5772560180381705,
+      0.6012267139759281
+    ]
+  },
+  "verification": {
+    "complete_epochs": 100,
+    "independently_recomputed_reports": 200,
+    "train_samples_scored_per_epoch": 61024,
+    "train_drop_last": true,
+    "count_closure": true,
+    "micro_macro_exact": true,
+    "farmland_semantics": true,
+    "loss_finite": true,
+    "fatal_log_hits": {
+      "Traceback (most recent call last)": 0,
+      "CUDA out of memory": 0,
+      "Non-finite model loss; refusing optimizer update": 0
+    },
+    "live_data_hashes": [
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\scene_state_info.json",
+        "sha256": "40887b9c470acceaae705a017c64b08b92f0a97b159fca2e5d224bae6f1f4907",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\split_manifest.json",
+        "sha256": "8bb1fff8333b909b8553ebb5ff73269d7c8e2e2e4bc8251e66ec5d643cc47694",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\test\\names.txt",
+        "sha256": "80db7345f6efb7ab45e108b05df60770959908a23ecf4295b81c50cb885dde24",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\test\\resolved_samples.json",
+        "sha256": "2bd40a0b92d0c3c728ef57e2fe3f9d1a6154e2f0235d6114ca70c313f609bd35",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\train\\names.txt",
+        "sha256": "e8e157e78af20b6160d01596b17ef66199d2b73b8e98f378e29b323542c38f77",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\train\\resolved_samples.json",
+        "sha256": "51dc78854380b08fa15f6350b74fcbe480f99a1e6cabe7c26a8e522f8f2e6968",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\val\\names.txt",
+        "sha256": "35401981d72955e7e827ca8cddf8140f432089ac145784097bf661d05c48fe46",
+        "matches_startup": true
+      },
+      {
+        "path": "D:\\CD\\0617final_256_v2_disjoint_20261009\\val\\resolved_samples.json",
+        "sha256": "3721b95ec5c31e030bc217797df1eec25933de77c26a5ca1aab11c22f854a207",
+        "matches_startup": true
+      }
+    ],
+    "checkpoint_metadata": [
+      {
+        "file": "best_model.pth",
+        "size_bytes": 746107246,
+        "completed_epoch": 90,
+        "run_identity": "d1584ee10d43b2df6e2b2e6922535cb2451a9f44941bedd8bcb23dba4ea93d75",
+        "data_split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+        "protocol_version": "hicd.strict_joint.v1",
+        "prediction_semantics_version": "hicd.predicted_farmland_nochange.v1",
+        "best_selection_criterion": "validation.all_foreground.strict_joint_f1_micro",
+        "strict_joint_score": 0.895640499834862,
+        "best_epoch": 90,
+        "best_macro_epoch": 56,
+        "best_macro_score": 0.6226105183775097,
+        "model_tensor_count": 839,
+        "optimizer_groups": 6,
+        "scheduler": {
+          "T_max": 100,
+          "eta_min": 1.0000000000000002e-06,
+          "base_lrs": [
+            1e-05,
+            0.0001,
+            0.0001,
+            5e-05,
+            0.0001,
+            0.0001
+          ],
+          "last_epoch": 90,
+          "verbose": false,
+          "_step_count": 91,
+          "_get_lr_called_within_step": false,
+          "_last_lr": [
+            1.2202456766718096e-06,
+            3.422702443389901e-06,
+            3.422702443389901e-06,
+            2.199115350768738e-06,
+            3.422702443389901e-06,
+            3.422702443389901e-06
+          ]
+        }
+      },
+      {
+        "file": "best_macro.pth",
+        "size_bytes": 746107246,
+        "completed_epoch": 56,
+        "run_identity": "d1584ee10d43b2df6e2b2e6922535cb2451a9f44941bedd8bcb23dba4ea93d75",
+        "data_split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+        "protocol_version": "hicd.strict_joint.v1",
+        "prediction_semantics_version": "hicd.predicted_farmland_nochange.v1",
+        "best_selection_criterion": "validation.all_foreground.strict_joint_f1_micro",
+        "strict_joint_score": 0.8875011299395743,
+        "best_epoch": 53,
+        "best_macro_epoch": 56,
+        "best_macro_score": 0.6226105183775097,
+        "model_tensor_count": 839,
+        "optimizer_groups": 6,
+        "scheduler": {
+          "T_max": 100,
+          "eta_min": 1.0000000000000002e-06,
+          "base_lrs": [
+            1e-05,
+            0.0001,
+            0.0001,
+            5e-05,
+            0.0001,
+            0.0001
+          ],
+          "last_epoch": 56,
+          "verbose": false,
+          "_step_count": 57,
+          "_get_lr_called_within_step": false,
+          "_last_lr": [
+            4.6567840843642414e-06,
+            4.122462492800665e-05,
+            4.122462492800665e-05,
+            2.0909157792649748e-05,
+            4.122462492800665e-05,
+            4.122462492800665e-05
+          ]
+        }
+      },
+      {
+        "file": "checkpoint_epoch_50.pth",
+        "size_bytes": 746107246,
+        "completed_epoch": 50,
+        "run_identity": "d1584ee10d43b2df6e2b2e6922535cb2451a9f44941bedd8bcb23dba4ea93d75",
+        "data_split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+        "protocol_version": "hicd.strict_joint.v1",
+        "prediction_semantics_version": "hicd.predicted_farmland_nochange.v1",
+        "best_selection_criterion": "validation.all_foreground.strict_joint_f1_micro",
+        "strict_joint_score": 0.8795338708422991,
+        "best_epoch": 49,
+        "best_macro_epoch": 39,
+        "best_macro_score": 0.6025228321513919,
+        "model_tensor_count": 839,
+        "optimizer_groups": 6,
+        "scheduler": {
+          "T_max": 100,
+          "eta_min": 1.0000000000000002e-06,
+          "base_lrs": [
+            1e-05,
+            0.0001,
+            0.0001,
+            5e-05,
+            0.0001,
+            0.0001
+          ],
+          "last_epoch": 50,
+          "verbose": false,
+          "_step_count": 51,
+          "_get_lr_called_within_step": false,
+          "_last_lr": [
+            5.500000000000003e-06,
+            5.050000000000003e-05,
+            5.050000000000003e-05,
+            2.55e-05,
+            5.050000000000003e-05,
+            5.050000000000003e-05
+          ]
+        }
+      },
+      {
+        "file": "checkpoint_epoch_100.pth",
+        "size_bytes": 746107246,
+        "completed_epoch": 100,
+        "run_identity": "d1584ee10d43b2df6e2b2e6922535cb2451a9f44941bedd8bcb23dba4ea93d75",
+        "data_split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+        "protocol_version": "hicd.strict_joint.v1",
+        "prediction_semantics_version": "hicd.predicted_farmland_nochange.v1",
+        "best_selection_criterion": "validation.all_foreground.strict_joint_f1_micro",
+        "strict_joint_score": 0.8942938288614153,
+        "best_epoch": 90,
+        "best_macro_epoch": 56,
+        "best_macro_score": 0.6226105183775097,
+        "model_tensor_count": 839,
+        "optimizer_groups": 6,
+        "scheduler": {
+          "T_max": 100,
+          "eta_min": 1.0000000000000002e-06,
+          "base_lrs": [
+            1e-05,
+            0.0001,
+            0.0001,
+            5e-05,
+            0.0001,
+            0.0001
+          ],
+          "last_epoch": 100,
+          "verbose": false,
+          "_step_count": 101,
+          "_get_lr_called_within_step": false,
+          "_last_lr": [
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06
+          ]
+        }
+      },
+      {
+        "file": "latest.pth",
+        "size_bytes": 746107246,
+        "completed_epoch": 100,
+        "run_identity": "d1584ee10d43b2df6e2b2e6922535cb2451a9f44941bedd8bcb23dba4ea93d75",
+        "data_split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+        "protocol_version": "hicd.strict_joint.v1",
+        "prediction_semantics_version": "hicd.predicted_farmland_nochange.v1",
+        "best_selection_criterion": "validation.all_foreground.strict_joint_f1_micro",
+        "strict_joint_score": 0.8942938288614153,
+        "best_epoch": 90,
+        "best_macro_epoch": 56,
+        "best_macro_score": 0.6226105183775097,
+        "model_tensor_count": 839,
+        "optimizer_groups": 6,
+        "scheduler": {
+          "T_max": 100,
+          "eta_min": 1.0000000000000002e-06,
+          "base_lrs": [
+            1e-05,
+            0.0001,
+            0.0001,
+            5e-05,
+            0.0001,
+            0.0001
+          ],
+          "last_epoch": 100,
+          "verbose": false,
+          "_step_count": 101,
+          "_get_lr_called_within_step": false,
+          "_last_lr": [
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06,
+            1.0000000000000002e-06
+          ]
+        }
+      }
+    ],
+    "checkpoint_sha256_computed": false
+  },
+  "metric_sources": [
+    {
+      "file": "epoch_001.json",
+      "sha256": "f02f0310cd37c84ccfb79eef2418ae45a3818db8421f7433c43d5ac8c58120fe"
+    },
+    {
+      "file": "epoch_002.json",
+      "sha256": "6458a7019396b6e86d0b9b415fc9334f12fa243cc539702008084d78fce54cbf"
+    },
+    {
+      "file": "epoch_003.json",
+      "sha256": "ba235ecf96f4ebd12854caf95dc3108adf51c55adfd72a541768ed4dafdffdc5"
+    },
+    {
+      "file": "epoch_004.json",
+      "sha256": "a8174d12615318d0a99393bd70088f880e765504343cc65832f60d2a4375af60"
+    },
+    {
+      "file": "epoch_005.json",
+      "sha256": "269bae59ad5f1cc3b9480f77c7ec1d74d46f98e030762714a3743d61e9d34cab"
+    },
+    {
+      "file": "epoch_006.json",
+      "sha256": "1bb6da241ba6ce9c1dcd34caf72e1d796e949e57ba42077c4b43be476dbc8091"
+    },
+    {
+      "file": "epoch_007.json",
+      "sha256": "9f0a60fa336a56c5efbaef9805e9a8b3c532348565679625f12ca0d56dd0b62e"
+    },
+    {
+      "file": "epoch_008.json",
+      "sha256": "b2d9c8ec5a68f22fd845559e158d861290af34d9fe9dfbc048f793169d19cd87"
+    },
+    {
+      "file": "epoch_009.json",
+      "sha256": "6b8788397236270c8fd09ce0bf193f0ce12402df23e402d2de2ddae3cfab6e86"
+    },
+    {
+      "file": "epoch_010.json",
+      "sha256": "a508a15f13b899390617a8b3e98a48826900671fbb8bf4b24f5cbfccadc8d1e9"
+    },
+    {
+      "file": "epoch_011.json",
+      "sha256": "524aa12ec0fa8f78109ce9833d585b70d95e4d1383c26e736594c29b86c8c1df"
+    },
+    {
+      "file": "epoch_012.json",
+      "sha256": "f33214bbfca66c08e534cbd7d3822bcb65c2e2894dec1f5c5f373dcbe044daff"
+    },
+    {
+      "file": "epoch_013.json",
+      "sha256": "9c14a11edfb36753ee9c9682d479b7e07d3bc04be610a35ff8ef24274070d516"
+    },
+    {
+      "file": "epoch_014.json",
+      "sha256": "ceffc8693b435e15b26410486cf4cb843700a2306601178cfa59d99bf4542ac5"
+    },
+    {
+      "file": "epoch_015.json",
+      "sha256": "53976617ac0b86603bfde5160ec3567f0ad2ed811146ca8287114ab1b81da72c"
+    },
+    {
+      "file": "epoch_016.json",
+      "sha256": "d47e9396c935052b75dec3677da679e0deba51476ed8e2a2ac3c8089f8a3c488"
+    },
+    {
+      "file": "epoch_017.json",
+      "sha256": "5b835820ccca0d049a3660a3bb7b5c1922118574fc6142740ed79b26968afa35"
+    },
+    {
+      "file": "epoch_018.json",
+      "sha256": "9306bfe8d757fee10b0763ccde3b504dc431fcfce3c25175169159bee5827e20"
+    },
+    {
+      "file": "epoch_019.json",
+      "sha256": "1460edfe9db2b1dfceb6d34f2c88e47684b5fe4d880437fb9ec1893444451872"
+    },
+    {
+      "file": "epoch_020.json",
+      "sha256": "e1dac2d643b9de05813c5ccac6a2b78025d57b18d7c4e0d46595794ccb0b8dd0"
+    },
+    {
+      "file": "epoch_021.json",
+      "sha256": "ad20eac186b7c46315b17ee361d6580202f701a16534c0c5cb2c4b1f39276a5d"
+    },
+    {
+      "file": "epoch_022.json",
+      "sha256": "bd0fd3983345eb2e62f3f76815041e8f34549c51f9d4781e9fecafce02ee77c5"
+    },
+    {
+      "file": "epoch_023.json",
+      "sha256": "6419ac59bf9a5cb69850e4512990627f5f6afc5c2250a5bdca679ca77c00a758"
+    },
+    {
+      "file": "epoch_024.json",
+      "sha256": "8b70152172c8b2d07e20e6861192d34027f403f807161d395b3aed881651996d"
+    },
+    {
+      "file": "epoch_025.json",
+      "sha256": "f8f935d4ea4a3211044298c7430e451b02535cca58bc3011109ec20312ef617f"
+    },
+    {
+      "file": "epoch_026.json",
+      "sha256": "e862d6813ad679812e1fb1ff6006d69e1ffead8557ca187523efc89119d87f9a"
+    },
+    {
+      "file": "epoch_027.json",
+      "sha256": "98937a04eb80546b093563d49c1778e31dc6eabc48ee835e89df33d264b6685e"
+    },
+    {
+      "file": "epoch_028.json",
+      "sha256": "54eab03260b8196392f81b8bf5820a6c981725df9a2adc096d39dbeb45bcceaa"
+    },
+    {
+      "file": "epoch_029.json",
+      "sha256": "b4324f01ca3ca942e5f4fcdea63d99b4d102ce1236598cec2586294e99b5dc85"
+    },
+    {
+      "file": "epoch_030.json",
+      "sha256": "9a5c194184105a07bff9ef2958dc59a2a1f4cf50e6a71243d31f8a236d312ab6"
+    },
+    {
+      "file": "epoch_031.json",
+      "sha256": "b7e0e303facf9289a583bf9b76b35be1fb6afecfa95bfed9c4e338d7f7d2707b"
+    },
+    {
+      "file": "epoch_032.json",
+      "sha256": "4aac8394ae4829b9b79ce94e937a7bf048590655b06cf3786f3d15751d0bf93f"
+    },
+    {
+      "file": "epoch_033.json",
+      "sha256": "90a46bd051919fc4a8b89b25db7624c45893980ce0e282e516f885e8dc9658b5"
+    },
+    {
+      "file": "epoch_034.json",
+      "sha256": "9956511a69d7518c31e932498c38d8f80f62e6da9a48d44535ebeab2a0361e06"
+    },
+    {
+      "file": "epoch_035.json",
+      "sha256": "929cd34aeab3fc5421e38ad23092f766ab647594e9715efc74a987eb3bdf69c6"
+    },
+    {
+      "file": "epoch_036.json",
+      "sha256": "193500d3da844f951b40f2b5cce8777cdd58cd33f638ce53400e3e41a70add1e"
+    },
+    {
+      "file": "epoch_037.json",
+      "sha256": "87d8abdf048bc8cc5d5337604664219d49c7c9f3237dc0693bec08e01cee3410"
+    },
+    {
+      "file": "epoch_038.json",
+      "sha256": "398ff0e44bd5bff0f26f788a2a90dbe6fccb21ec6de92cd89deea2ba939835b5"
+    },
+    {
+      "file": "epoch_039.json",
+      "sha256": "cf21939cda43c9348a0e97b59e896445bad568eb625354ebc56c4cd62e4d06a9"
+    },
+    {
+      "file": "epoch_040.json",
+      "sha256": "e56baaecedb549d657ed2edab8fa7d7c8ceaf7ff1b29bc61625f8f692d8fee94"
+    },
+    {
+      "file": "epoch_041.json",
+      "sha256": "db906c21fdc53f4497dd0bae0c0d5377b8a31185410e0bbfdcbad339169750c6"
+    },
+    {
+      "file": "epoch_042.json",
+      "sha256": "873bf6243196f616005590176b7de8068e9fbd6d04d98031d4dfad3be2097d0d"
+    },
+    {
+      "file": "epoch_043.json",
+      "sha256": "e1b1e7ca2fb9c1ffc1580d1374ccdcb50d92d95376a2008d09c9374fef6194d7"
+    },
+    {
+      "file": "epoch_044.json",
+      "sha256": "22229b56a9b14c8d080c4514c22f06bba31920124429fbff863f1fdb54c381ba"
+    },
+    {
+      "file": "epoch_045.json",
+      "sha256": "a4e495d13d8e93cc01078b3aaa28e2445f22958816a4e867e286b41ba322dc0d"
+    },
+    {
+      "file": "epoch_046.json",
+      "sha256": "d710e5edd2104fe0a43673ba9503e423b7ae51e40d5f901e77edb9e916fbfea1"
+    },
+    {
+      "file": "epoch_047.json",
+      "sha256": "a060afc4aed6af300eec8c6b2ac32b983c17e12e79824aff52499e7d7789d8a2"
+    },
+    {
+      "file": "epoch_048.json",
+      "sha256": "c62cf91ba11b656c2a74d43606e561a91029b9df5944703acc68bc4b20e06351"
+    },
+    {
+      "file": "epoch_049.json",
+      "sha256": "b4afcdf1073a56864c2a926edd9edd5e4fd874969b66d4fccfcb27d7cadb4352"
+    },
+    {
+      "file": "epoch_050.json",
+      "sha256": "84fe4b7ec51618df48a53003ae4fa5aea12916c7012c88ac562ba85562c44a37"
+    },
+    {
+      "file": "epoch_051.json",
+      "sha256": "fd6c4bb9d585a922a55be8f6c23b3e9a7a5f19f67b4cc0df5ee6802855a6060d"
+    },
+    {
+      "file": "epoch_052.json",
+      "sha256": "a2905721d2b044b2936ee609d9355e65181c06bd0451d854e24824716d63ab5d"
+    },
+    {
+      "file": "epoch_053.json",
+      "sha256": "d48e2bdfb0fa53cd7c8130381f0f575af3f489ef0ba46d2a889c4cb331d50bb7"
+    },
+    {
+      "file": "epoch_054.json",
+      "sha256": "2007fc69c68540ca5afebb5093aea4bc64efbc29c1ce348fc90d0c3eeea702a0"
+    },
+    {
+      "file": "epoch_055.json",
+      "sha256": "c51f0ec090be1bf968cafe267482c113d2b48ca14a189bf45fb3909f037e8015"
+    },
+    {
+      "file": "epoch_056.json",
+      "sha256": "752afa6555896825685bab9cd32bc426531e734312252729f55c25d6b73cd927"
+    },
+    {
+      "file": "epoch_057.json",
+      "sha256": "6741ae56edebb89571245e5ca4aacf5830dbd407764018bbf17cb65d291d2ec7"
+    },
+    {
+      "file": "epoch_058.json",
+      "sha256": "b6f4d0ad3cf21e892bba5d4b544cbfeaa44b66e995dc7560ddeb1b07521d605f"
+    },
+    {
+      "file": "epoch_059.json",
+      "sha256": "90f51e254b710af0e055a86c4ae11af8fb7149c4da34ce56d4bc7f611d23d3e5"
+    },
+    {
+      "file": "epoch_060.json",
+      "sha256": "0a2374f544fa80447ca79b2f453351bb5908c4b2a5f20a1a6292d837199ee726"
+    },
+    {
+      "file": "epoch_061.json",
+      "sha256": "1b89eeab0f58a1b884b11a77debbe7acefaf7a1eda216a83cd10af36808b3a95"
+    },
+    {
+      "file": "epoch_062.json",
+      "sha256": "71fcc50b5b579113f996c6cad392c0ebc8b28ff7d390fa51d7a84a657b3d98d2"
+    },
+    {
+      "file": "epoch_063.json",
+      "sha256": "c7de632bd4a4b7d3b3e85620230e4ec8c9b6146301fd086826c1e63dc7305f38"
+    },
+    {
+      "file": "epoch_064.json",
+      "sha256": "08928012ba1d3ac6d955c881a2b945b840f033386fb52eea62232396badeb8e8"
+    },
+    {
+      "file": "epoch_065.json",
+      "sha256": "58a1f694b09b612d888bb443655a9a9e36923ef76b3a4acdde46fffec22eee26"
+    },
+    {
+      "file": "epoch_066.json",
+      "sha256": "b3637c8c1ea662fc387142633738a72865ef136021e47dcd6e0b56345f851739"
+    },
+    {
+      "file": "epoch_067.json",
+      "sha256": "a1af40852d9fbd222a7d9614cdc5f49c536564df9deaf7a0371cd171fc4db706"
+    },
+    {
+      "file": "epoch_068.json",
+      "sha256": "01b6daef3cb698fbce30e28bc71eaf862418cba9668fc76f3a3ddbfbd5ed9a6a"
+    },
+    {
+      "file": "epoch_069.json",
+      "sha256": "847ee5602c5cf7567b7a7c4c73a0a509ec725946c015344b27b7a581411737c3"
+    },
+    {
+      "file": "epoch_070.json",
+      "sha256": "7e3633cd092e3e043c5f75cd89e818a35fb4a188b43c1c6a727ea67ff10224e0"
+    },
+    {
+      "file": "epoch_071.json",
+      "sha256": "9166dc893e4999c288b89dce60ded24945976beb949c81c40a7150842ec1940a"
+    },
+    {
+      "file": "epoch_072.json",
+      "sha256": "28170ef2f2999c6328b424393c0fc89bffacc9286241bce69afdf7f142052ec8"
+    },
+    {
+      "file": "epoch_073.json",
+      "sha256": "bccdc7354860db86bbb4710ac3523800e4a69fcd609a3feb80174fd3be971566"
+    },
+    {
+      "file": "epoch_074.json",
+      "sha256": "e7e43dd0c16a9c02373dcd297d91e0fe90949df688e157b8c69ee9bf59d39d95"
+    },
+    {
+      "file": "epoch_075.json",
+      "sha256": "aced88b2c378194c42c5e7aaf05a34a2f5c547c3ec0a1f649cc829cacbee9c1d"
+    },
+    {
+      "file": "epoch_076.json",
+      "sha256": "ca16d867b03d455bbfcb2e2ad82a97ef90d9446c8456dbe0e0c5eb1c8e3c56b3"
+    },
+    {
+      "file": "epoch_077.json",
+      "sha256": "e84f96e3d2ebb8422bef43622eee806691ab22186c4330d7359a047c7156b3b8"
+    },
+    {
+      "file": "epoch_078.json",
+      "sha256": "839f3e5840a309cb29b8b8602fc2011ac96d965da430226660cc4e14fa822722"
+    },
+    {
+      "file": "epoch_079.json",
+      "sha256": "afc0d431c58217f61dd17c05dbbddb1bd55ce845d2e803c6d0534d223b8cc5d4"
+    },
+    {
+      "file": "epoch_080.json",
+      "sha256": "74bf7bf92001a224f16668c6120129c1c81210f74292e6e51431207af88aca31"
+    },
+    {
+      "file": "epoch_081.json",
+      "sha256": "a325ad2a537ceb1e899811b725dbe7ef63d8c26a1edeca9898e2094b59708b16"
+    },
+    {
+      "file": "epoch_082.json",
+      "sha256": "4ce66f0c064bf22afbf50fb3a876083afaba3f005fe5a1d9e1af0cc9562abef9"
+    },
+    {
+      "file": "epoch_083.json",
+      "sha256": "fa0fde7bcb5a2efb9fe03be1dd48158b22ca2d82af8f1e278b660d1d8eaaff5b"
+    },
+    {
+      "file": "epoch_084.json",
+      "sha256": "327804d52b0d4db9a358a7ff7f6b42339d6039ed151e36d75e71c757ad3b3b0c"
+    },
+    {
+      "file": "epoch_085.json",
+      "sha256": "14326b423ffc73fcf0943f1fb2874c7f0ad8d95e26ae8103ce8b41ac3600d56e"
+    },
+    {
+      "file": "epoch_086.json",
+      "sha256": "5aae06647b0d48f6e29a564fc9cf2148ae20c08af14babefc5e4a44cfcf351db"
+    },
+    {
+      "file": "epoch_087.json",
+      "sha256": "0350d34d57d667f21af4afbf1306cb15f644d4bb73705d11a47bdce9412bae3c"
+    },
+    {
+      "file": "epoch_088.json",
+      "sha256": "7673c01cd5ede1e68afbfdc3dbb1e2fed463167d633eeff7ccf1f970ccd2e147"
+    },
+    {
+      "file": "epoch_089.json",
+      "sha256": "49a737c04b350920b77b1463f8c8eff0d3cb085ad2510419ec037cecc4babd13"
+    },
+    {
+      "file": "epoch_090.json",
+      "sha256": "2493f9409070b20528d54d5e551f78a9f2ede82a075ab79c654401c1d40d086e"
+    },
+    {
+      "file": "epoch_091.json",
+      "sha256": "6aaa1f995794779caa2997163569fe9fb5c462f9c8802fb6250b28281d7408a1"
+    },
+    {
+      "file": "epoch_092.json",
+      "sha256": "2e107a8854f957f6c33fdc2ceddb7c0f38b9439eb4e69f680f58b1aee2a43174"
+    },
+    {
+      "file": "epoch_093.json",
+      "sha256": "84aca6485abe2f2375ef53831dd1a381360f79013289040bb1c2c80e3725d76e"
+    },
+    {
+      "file": "epoch_094.json",
+      "sha256": "54c0c25b198e946af401a04249f387d05c81f4f7ff0f6fa79e320104a8249276"
+    },
+    {
+      "file": "epoch_095.json",
+      "sha256": "e045b564d9b54ed0513b18378f8b78c4029bc9f6444be398ad368c6e65da388c"
+    },
+    {
+      "file": "epoch_096.json",
+      "sha256": "c663a1cfaa82cd16dc1dae8e08892876e9ee332bde4d09ad214b5eb21b2f0599"
+    },
+    {
+      "file": "epoch_097.json",
+      "sha256": "6d1f489b4ee67098b8b0c4ee4440f6a8fa692d5493e33a3bf1e3f739017a780a"
+    },
+    {
+      "file": "epoch_098.json",
+      "sha256": "226c5dd22e79e02124d30b973a4c18e193e0d818d6b2f7604247bb08337ca852"
+    },
+    {
+      "file": "epoch_099.json",
+      "sha256": "e4cd9230c34814fa24710d741cfb8d0cc595f80fdc9f5caea42597c44069087c"
+    },
+    {
+      "file": "epoch_100.json",
+      "sha256": "5fd5e5885e3ea22760c2182876b53c1a07bbbc04b03d3b9e13bdf22714b3483b"
+    }
+  ],
+  "new_test_evaluated": false,
+  "limitations": [
+    "Validation is a development set: selection and adaptive-loss feedback.",
+    "GT-zero/pred-positive joint classes are included as zero-F1; active class count may vary.",
+    "GT-supported macro is diagnostic only, does not replace the established official metric.",
+    "No controlled old-split50 versus new-split100 causal gain.",
+    "Single seed; no external geography/content independence claim."
+  ]
+}

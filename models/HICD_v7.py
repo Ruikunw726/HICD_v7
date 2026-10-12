@@ -163,16 +163,33 @@ class HICD_v7(nn.Module):
 
     def get_param_groups(self, lr=1e-4, weight_decay=1e-4):
         param_groups = []
-        backbone_trainable = [p for p in self.backbone.parameters() if p.requires_grad]
-        if backbone_trainable:
-            param_groups.append({'params': backbone_trainable, 'lr': lr*0.1, 'weight_decay': weight_decay, 'name': 'backbone'})
+        # Frozen parameters create no Adam state until they receive gradients.
+        # Keep them registered so later unfreezing cannot silently omit them.
+        backbone_params = list(self.backbone.parameters())
+        if backbone_params:
+            param_groups.append({'params': backbone_params, 'lr': lr*0.1, 'weight_decay': weight_decay, 'name': 'backbone'})
         ntfm_params = list(self.nfa_t1.parameters()) + list(self.nfa_t2.parameters()) + list(self.tfm.parameters())
         param_groups.append({'params': ntfm_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'nfa_tfm'})
         param_groups.append({'params': list(self.instance_head.parameters()), 'lr': lr, 'weight_decay': weight_decay, 'name': 'instance_head'})
         label_params = list(self.label_structure.parameters())
         param_groups.append({'params': label_params, 'lr': lr*0.5, 'weight_decay': weight_decay, 'name': 'label_structure'})
         param_groups.append({'params': list(self.semantic_head.parameters()), 'lr': lr, 'weight_decay': weight_decay, 'name': 'semantic_head'})
+        if self.use_freq_branch:
+            frequency_params = list(self.freq_branch.parameters()) + list(self.freq_fusion.parameters())
+            param_groups.append({'params': frequency_params, 'lr': lr, 'weight_decay': weight_decay, 'name': 'frequency'})
+        self.assert_optimizer_coverage(param_groups)
         return param_groups
+
+    def assert_optimizer_coverage(self, param_groups):
+        """Every model parameter is registered exactly once, including frozen ones."""
+        from collections import Counter
+        counts = Counter(id(p) for group in param_groups for p in group['params'])
+        known = {id(p): name for name, p in self.named_parameters()}
+        missing = [name for key, name in known.items() if counts[key] != 1]
+        unknown = [key for key in counts if key not in known]
+        if missing or unknown:
+            raise RuntimeError(f'Optimizer parameter coverage mismatch: missing/duplicate={missing}, unknown={unknown}')
+        return {'model_parameters': len(known), 'optimizer_parameters': len(counts)}
 
 
 def build_hicd_v7(config):

@@ -1,4 +1,22 @@
-# HICD v9 — Hierarchical Instance Change Detection
+# HICD — T1–T3 严格联合变化识别
+
+## 当前实验版本（2026-10-12）
+
+当前只训练Building（T1）、Farmland/Runway/Taxiway/Apron/Highway（T2）、Aircraft/Vessel（T3）。T4及Tower GT忽略，Farmland按项目定义只有不变。主评价要求目标与原始具体状态同时正确；旧BDD/D–ND分组分数不能与其直接比较。
+
+- 数据：恢复原始真实成员划分，train61,029/val13,077/test13,077；固定来源catalog，同名/母图切片/pre路径跨split互斥。这不等于已证明城市、全部内容或地理空间独立。
+- 协议：[strict joint v1](docs/strict_joint_protocol.md)，raw状态头、nearest GT、256输入与64计分；micro主best、独立macro-best，逐目标/状态P/R/F1同时保存。
+- 完成实验：v12 disjoint e100，val micro-best第90轮89.5640%；同轮完整test13,077张micro89.9953%、macro62.2192%。[训练报告](docs/experiments/v12_t123_disjoint_e100_completion_20261011.md)、[测试报告](docs/experiments/v12_t123_epoch90_test_20261011.md)、[可随仓库获取的结果JSON](docs/experiments/results_snapshot_20261012/)。
+- 待启动实验：v13 DINO corrected e100；DINO内权重匹配归一化、after-block normalized特征、末层梯度路径已CPU验收，保持其余损失/数据/采样/评估。等待既有Bi-SRNet100轮与完整test成功完成、GPU空闲后做GPU预检再从头训练，当前没有新模型成绩。[准备与验收](docs/experiments/dino_integration_20261012/READY.md)。
+- 新训练：`bash launch_dino_corrected.sh --check-only`核查条件，`bash launch_dino_corrected.sh`执行准备/预检/后台训练。主源码WSL路径为`/mnt/f/mambacd/home/HICD_v7`；相邻`baselines_compare`属于外层独立发布范围，接续入口需要其当前run状态。
+- 新版权重评估必须使用`script/eval_dino_corrected_test.py`；旧v12保持旧builder，不在旧权重上热换归一化。weights/checkpoints不纳入Git，预训练来源及实际162个张量匹配证据见准备记录。
+- CPU回归：`python -m unittest discover -s tests -p 'test_*.py' -v`；54项通过。预训练接口验证脚本还需要本地与固定revision对照权重。真实CPU smoke仅作通路检查，GPU smoke尚待空闲资源。
+
+`ready_manifest.json`与CPU验收是本机当前工作区的快照，包含源码hash和本地数据/预训练身份；迁移机器或重新检出后须重新核验并生成相符记录，不能把历史READY当作另一环境的启动许可。Shell/Python源码采用LF，避免Windows检出后WSL解释失败。
+
+## v9历史说明
+
+下文保留历史设计与数据规模，代表当时的配置；其T4、过采样、BDD口径和样本数量不用于当前T1–T3实验。
 
 基于 DINOv3 + GNN 图结构标签空间的战争损毁语义变化检测。
 

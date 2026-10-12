@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "train": {
+      "resolved_count": 61029,
+      "sampled_indices": [
+        0,
+        30514,
+        61028
+      ],
+      "sampled_shape_decode_valid": true
+    },
+    "val": {
+      "resolved_count": 13077,
+      "sampled_indices": [
+        0,
+        6538,
+        13076
+      ],
+      "sampled_shape_decode_valid": true
+    },
+    "test": {
+      "resolved_count": 13077,
+      "sampled_indices": [
+        0,
+        6538,
+        13076
+      ],
+      "sampled_shape_decode_valid": true
+    }
+  },
+  "no_cross_resolved_pre_paths": true,
+  "GPU_used": false
+}

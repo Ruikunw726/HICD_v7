@@ -221,7 +221,8 @@ class TrainerV7:
                 if self.args.backbone_type == 'dinov3':
                     blocks = list(self.model.backbone.blocks)
                     num_to_unfreeze = int(len(blocks) * self.args.unfreeze_ratio)
-                    for block in blocks[-num_to_unfreeze:]:
+                    selected_blocks = blocks[-num_to_unfreeze:] if num_to_unfreeze else []
+                    for block in selected_blocks:
                         for p in block.parameters():
                             p.requires_grad = True
                     for proj in self.model.backbone.proj_heads:
@@ -312,9 +313,14 @@ class TrainerV7:
 
         self.evaluator.reset()
 
+        if self.args.grad_accum < 1:
+            raise ValueError('grad_accum must be positive')
+        self.optimizer.zero_grad()
+        total_batches = len(self.train_loader)
+
         pbar = tqdm(self.train_loader,
                     desc=f'Epoch {epoch+1}/{self.args.max_epochs}',
-                    leave=True, ncols=130, mininterval=0.5, file=sys.stdout)
+                    leave=True, ncols=130, miniters=100, file=sys.stderr)
 
         for batch_idx, batch in enumerate(pbar):
             img_t1 = batch['img_t1'].to(self.device)
@@ -327,13 +333,17 @@ class TrainerV7:
             else:
                 predictions, loss, loss_dict = self.model(img_t1, img_t2, targets)
 
-            scaled_loss = loss / self.args.grad_accum
+            # Normalize each accumulation window by its actual size, including
+            # a short final window, and flush it before leaving this epoch.
+            window_start = (batch_idx // self.args.grad_accum) * self.args.grad_accum
+            window_size = min(self.args.grad_accum, total_batches - window_start)
+            scaled_loss = loss / window_size
             if self.args.use_amp:
                 self.scaler.scale(scaled_loss).backward()
             else:
                 scaled_loss.backward()
 
-            if (batch_idx + 1) % self.args.grad_accum == 0:
+            if (batch_idx + 1) % self.args.grad_accum == 0 or batch_idx + 1 == total_batches:
                 if self.args.use_amp:
                     self.scaler.step(self.optimizer)
                     self.scaler.update()

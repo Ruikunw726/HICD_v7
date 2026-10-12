@@ -1,0 +1,24 @@
+{
+  "status": "CPU_READY_GPU_PREFLIGHT_DEFERRED_UNTIL_BASELINE_COMPLETE",
+  "experiment": "v13_dino_corrected_t123_disjoint_e100_20261012",
+  "automation_id": "dino",
+  "source_sha256": {
+    "models/backbone/dinov3_corrected.py": "9846102df9eca67325fbc49fe581438c27948ed456a955ac1996b721c32e2f54",
+    "models/dino_corrected_model.py": "833826d49ff7411414d44627b8420efea9000e0f39314a813028db4fb1ed619a",
+    "script/train_dino_corrected_v7.py": "c413291262655f2a95ad427b238c95a8a7a213cc1a2b7325adc7ab9b3c8f3a5b",
+    "script/eval_dino_corrected_test.py": "c6a8becb122f85a0e7a58b2e11076a7dc77f98733010fe393766f0219abecff7",
+    "script/check_dino_handoff.py": "00c24bf92d549a358cf97f620adc094de41e8ceb813a99b6ff13cdee93bcde00",
+    "script/check_dino_ready.py": "d3b1456456c893c14c0fe471ed11ce46ce16c650955ef8a43830b61e929fc9c0",
+    "script/verify_dino_integration.py": "ddc9b7b7e449cfd4b5bb43a6ebdb5e2cd335964c995d02b6b61343c86e58f185",
+    "script/verify_dino_corrected_real_cpu.py": "9351cf26b328b61d8c7818a6a31a8477ce22cb6cb880397865a0a018d1deac6b",
+    "launch_dino_corrected.sh": "ea5492ecde2be9622197d39aab0c9833d797610a81bdad8e0363fcca3179207d",
+    "datasets/configs/0617final_t123_dino_corrected_20261012.yaml": "6e07f4f5313608a4ed89dd0925297164eaff684c939b9cad3c7320720a60a349",
+    "models/backbone/dinov3.py": "f35a68df860045c80bd2ea8c8df1ce6c88fe46df0f68d325ff313dc6dc7662b5",
+    "models/HICD_v7.py": "0aabf73dc47e4181a3a624417a75be3bd67763e294e3bf5c991a4e290bde7e96",
+    "models/modules/label_structure.py": "0979954d477d2c560ef13a67ee54522648834a931407186533c408f8b0d9deff",
+    "models/losses/v7_loss.py": "b3f654300f680f4ad2ca4954a7d33f099dac23eea3bcdee5e30e1157e24447f6",
+    "datasets/dataset_v7.py": "8802546611f3d906afc75b7ae8a246512a04a974b918cbc9fd740dc69607474d",
+    "script/train_strict_v7.py": "191e9b589fac25647527424e80fcb740c2d3c3731cdec8ba5c0e9660f7b3160f",
+    "script/train_full_v7.py": "8b46c12fbc6e5faaf8e858fbc1a9995e8792730585f33e0f00c2a6be8e5eda36"
+  }
+}

@@ -1,33 +1,45 @@
 """
-LWGANet Backbone Wrapper for HICD v6
-Light-Weight Grouped Attention Network for Remote Sensing
+Backbone wrappers for HICD
+Supports DINOv3 (primary) and LWGANet (optional)
 """
 
 import torch
 import torch.nn as nn
-from .lwganet import LWGANet_L0_1242_e32_k11_GELU, LWGANet_L1_1242_e64_k11_GELU, LWGANet_L2_1242_e96_k11_RELU
+
+# LWGANet is optional - only DINOv3 is used
+try:
+    from .lwganet import LWGANet_L0_1242_e32_k11_GELU, LWGANet_L1_1242_e64_k11_GELU, LWGANet_L2_1242_e96_k11_RELU
+    HAS_LWGANET = True
+except ImportError:
+    HAS_LWGANET = False
+    LWGANet_L0_1242_e32_k11_GELU = None
+    LWGANet_L1_1242_e64_k11_GELU = None
+    LWGANet_L2_1242_e96_k11_RELU = None
 
 
 class LWGANetBackbone(nn.Module):
     """
     LWGANet backbone wrapper for HICD v6
-    
+
     Args:
         variant: LWGANet variant ('L0', 'L1', 'L2')
         pretrained: Whether to load pretrained weights
         pretrained_path: Path to pretrained weights
     """
-    
+
     # Channel configurations for each variant
     CHANNELS = {
         'L0': [32, 32, 64, 128, 256],
         'L1': [64, 64, 128, 256, 512],
         'L2': [96, 96, 192, 384, 768]
     }
-    
+
     def __init__(self, variant='L1', pretrained=True, pretrained_path=None):
         super().__init__()
-        
+
+        if not HAS_LWGANET:
+            raise ImportError("LWGANet not available. Use DINOv3 backbone instead.")
+
         self.variant = variant
         self.channels = self.CHANNELS[variant]
         

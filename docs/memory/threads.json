@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "id": "6714aa30-0cc1-467e-8cb4-a9faa32cab1e",
+    "name": "HICD",
+    "path": "F:/mambacd"
+  },
+  "organizedOn": "2026-10-02",
+  "timezone": "Asia/Shanghai",
+  "source": "F:/mambacd/home/HICD_v7/docs/HANDOVER.md",
+  "coordinator": {
+    "threadId": "01a0fa9b-cae7-7f20-8191-6e876b245a79",
+    "title": "HICD｜交接总览与工作分流",
+    "hostId": "local"
+  },
+  "threads": [
+    {
+      "workstream": "01",
+      "threadId": "01a0faa7-3a21-7672-b42c-b85f7c37947b",
+      "hostId": "local",
+      "title": "HICD｜训练恢复与方法改进",
+      "memoryFile": "workstreams/01_training_and_method.md",
+      "freshTrainingRun": {
+        "authorizedOn": "2026-10-08",
+        "executionTurnId": "01a11a80-5529-7772-9faf-fed935acd7b3",
+        "executionReceiptMessageId": "msg_07aa575654c87018016ac74fcb4bec87d09055326ef050439a",
+        "status": "running_early_health_verified",
+        "experiment": "v12_strict_joint_20261008",
+        "protocolVersion": "hicd.strict_joint.v1",
+        "directory": "checkpoints/v12_strict_joint_20261008",
+        "taskCheckpoint": null,
+        "observedAt": "2026-10-08T16:09:31+08:00",
+        "screen": "452.hicd_v12_strict_joint_20261008",
+        "pythonPid": 459,
+        "epoch": 1,
+        "targetEpochs": 50,
+        "observedBatch": 124,
+        "batchesPerEpoch": 1907,
+        "runningAverageLoss": 9.8819,
+        "completedEpochValidation": false
+      },
+      "trainingRun": {
+        "authorizedOn": "2026-10-08",
+        "executionTurnId": "01a11970-f325-72f0-a109-c03fc1bc33ce",
+        "executionReceiptMessageId": "msg_07aa575654c87018016ac709781ab887d0a038c87af075a1f6",
+        "status": "terminated_confirmed_before_fresh_strict_run",
+        "experiment": "v11_no_t4",
+        "resumeCheckpoint": "checkpoints/v11_no_t4/checkpoint_epoch_32.pth",
+        "auditDirectory": "checkpoints/v11_no_t4/resume_20261008_110218",
+        "observedAt": "2026-10-08T11:09:30+08:00",
+        "screen": "571355.hicd_v11_resume",
+        "pythonPid": 571365,
+        "epoch": 33,
+        "targetEpochs": 50,
+        "observedBatch": 96,
+        "batchesPerEpoch": 1907,
+        "runningAverageLoss": 2.9541
+      },
+      "intakeStatus": "accepted_checklist_delivered",
+      "acceptanceTurnId": "01a0faa7-3df4-7530-a592-ba78c37d93a6",
+      "checklistMessageId": "msg_07aa575654c87018016abf2620002c87d0b9c290caa177b121",
+      "memoryUpdated": true
+    },
+    {
+      "workstream": "02",
+      "threadId": "01a0faa7-40ef-7582-aade-33727bf88614",
+      "hostId": "local",
+      "title": "HICD｜多任务基线对比",
+      "memoryFile": "workstreams/02_baselines.md",
+      "intakeStatus": "accepted_checklist_delivered",
+      "acceptanceTurnId": "01a0faa7-4433-7a22-b731-b16a02ae0022",
+      "checklistMessageId": "msg_05fd1aaa333a466b016abf2634dc0087d0874845ae22a886bc",
+      "memoryUpdated": true
+    },
+    {
+      "workstream": "03",
+      "threadId": "01a0faa7-4660-7a83-9350-ef168cc89155",
+      "hostId": "local",
+      "title": "HICD｜T4 实例分支",
+      "memoryFile": "workstreams/03_instances.md",
+      "intakeStatus": "accepted_checklist_delivered",
+      "acceptanceTurnId": "01a0faa7-49cb-7803-8d17-d6f8b68464e5",
+      "checklistMessageId": "msg_0e720f7cb0dc9ff4016abf265c0b7487d0ae1b6a09371ae082",
+      "memoryUpdated": true
+    },
+    {
+      "workstream": "04",
+      "threadId": "01a0faa7-4c8d-76c3-a27c-d70dae628c62",
+      "hostId": "local",
+      "title": "HICD｜数据与评估口径",
+      "memoryFile": "workstreams/04_data_and_evaluation.md",
+      "strictEvaluationWork": {
+        "version": "hicd.strict_joint.v1",
+        "status": "implementation_complete_27_cpu_tests_passed",
+        "executionReceiptMessageId": "msg_0dfd0f1dad722d3a016ac74de8022887d0a20c23c943f9b98a",
+        "testsPassed": 27,
+        "executionTurnId": "01a11a7a-7478-7643-af5b-b79f0a81144e",
+        "requestedOn": "2026-10-08",
+        "module": "evaluation/strict_joint_protocol.py",
+        "trainingAdapter": "evaluation/strict_joint_evaluator.py"
+      },
+      "intakeStatus": "accepted_checklist_delivered",
+      "acceptanceTurnId": "01a0faa7-4f6d-7120-b63f-eb461239372e",
+      "checklistMessageId": "msg_0dfd0f1dad722d3a016abf26c6999887d0b04a32bcba9c5160",
+      "memoryUpdated": true
+    },
+    {
+      "workstream": "05",
+      "threadId": "01a0faa7-52e0-72b0-a893-6095aefa3428",
+      "hostId": "local",
+      "title": "HICD｜论文与研究论证",
+      "memoryFile": "workstreams/05_paper.md",
+      "intakeStatus": "accepted_checklist_delivered",
+      "acceptanceTurnId": "01a0faa7-567e-7f22-aede-076bc53420c5",
+      "checklistMessageId": "msg_0483208b5c2eed98016abf2644dbe487d094159ae1518804dd",
+      "memoryUpdated": true
+    },
+    {
+      "workstream": "06",
+      "threadId": "01a0faa7-5a31-7892-990b-ca9390b4e7d4",
+      "hostId": "local",
+      "title": "HICD｜实验管理与工作报告",
+      "memoryFile": "workstreams/06_project_operations.md",
+      "intakeStatus": "accepted_checklist_delivered",
+      "acceptanceTurnId": "01a0faa7-5d25-79c2-94a1-550b28c12e38",
+      "checklistMessageId": "msg_0f04b2dc6d80f950016abf26894a4c87d09da3f5f1e1c614c4",
+      "memoryUpdated": true
+    }
+  ],
+  "intakeStatus": "all_six_checklists_delivered",
+  "verifiedOn": "2026-10-02"
+}

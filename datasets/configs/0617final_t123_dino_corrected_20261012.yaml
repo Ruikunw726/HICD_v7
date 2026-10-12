@@ -1,0 +1,252 @@
+dataset: 0617final
+description: T1-T3 only, original real membership restored; no injected train/val/test
+  sharing; predicted Farmland fixed no-change
+pre_suffix: _pre_war
+post_suffix: _post_war
+label_suffix: _target
+post_label_suffix: null
+image_ext: .tif
+label_ext: .tif
+num_pixel_targets: 16
+pixel_target_names: &id001
+- Farmland
+- Runway
+- Taxiway
+- Apron
+- Bridge
+- Highway
+- Building
+- Shelter
+- Tower
+- Pier
+- Dock
+- Tank
+- Aircraft
+- Vessel
+- Crater
+- Background
+num_states: 7
+state_names:
+- no-change
+- damaged
+- reduced
+- added
+- extended
+- replaced
+- none
+num_targets: 16
+target_names: *id001
+ignore_index: 255
+category_hierarchy:
+  Surface Base:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  Fixed Targets:
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  Mobile Targets:
+  - 13
+  - 14
+  Stateless Targets:
+  - 15
+label_decode_map:
+  0: 15
+  1: 0
+  2: 0
+  3: 1
+  4: 1
+  5: 1
+  6: 1
+  7: 1
+  8: 2
+  9: 2
+  10: 2
+  11: 2
+  12: 2
+  13: 3
+  14: 3
+  15: 3
+  16: 3
+  17: 3
+  18: 255
+  19: 255
+  20: 255
+  21: 255
+  22: 255
+  23: 5
+  24: 5
+  25: 5
+  26: 5
+  27: 5
+  28: 6
+  29: 6
+  30: 6
+  31: 6
+  32: 6
+  33: 255
+  34: 255
+  35: 255
+  36: 255
+  37: 255
+  38: 255
+  39: 255
+  40: 255
+  41: 255
+  42: 255
+  43: 255
+  44: 255
+  45: 255
+  46: 255
+  47: 255
+  48: 255
+  49: 255
+  50: 255
+  51: 255
+  52: 255
+  53: 255
+  54: 255
+  55: 255
+  56: 255
+  57: 12
+  58: 12
+  59: 12
+  60: 12
+  61: 12
+  62: 13
+  63: 13
+  64: 13
+  65: 13
+  66: 13
+  67: 255
+  68: 255
+state_decode_map:
+  0: 6
+  1: 0
+  2: 0
+  3: 0
+  4: 1
+  5: 2
+  6: 3
+  7: 4
+  8: 0
+  9: 1
+  10: 2
+  11: 3
+  12: 4
+  13: 0
+  14: 1
+  15: 2
+  16: 3
+  17: 4
+  18: 255
+  19: 255
+  20: 255
+  21: 255
+  22: 255
+  23: 0
+  24: 1
+  25: 2
+  26: 3
+  27: 4
+  28: 0
+  29: 1
+  30: 2
+  31: 3
+  32: 4
+  33: 255
+  34: 255
+  35: 255
+  36: 255
+  37: 255
+  38: 255
+  39: 255
+  40: 255
+  41: 255
+  42: 255
+  43: 255
+  44: 255
+  45: 255
+  46: 255
+  47: 255
+  48: 255
+  49: 255
+  50: 255
+  51: 255
+  52: 255
+  53: 255
+  54: 255
+  55: 255
+  56: 255
+  57: 0
+  58: 1
+  59: 2
+  60: 3
+  61: 5
+  62: 0
+  63: 1
+  64: 2
+  65: 3
+  66: 5
+  67: 255
+  68: 255
+pixel_class_weights:
+- 0.063
+- 0.796
+- 0.933
+- 0.597
+- 0.0
+- 1.104
+- 0.069
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 7.22
+- 5.47
+- 0.0
+- 0.05
+state_pixel_weights:
+- 0.2
+- 3.0
+- 4.0
+- 5.0
+- 5.0
+- 4.0
+- 0.0
+branch_routing:
+  instance:
+  - Building
+  semantic: *id001
+active_heads:
+  instance_detection: true
+  change_type: false
+  damage_level: false
+  pixel_target: true
+  pixel_state: true
+train_split: train
+val_split: val
+test_split: test
+w_state_pixel: 2.0
+state_ignore_targets:
+- 0
+frequency_branch:
+  enabled: true
+  out_dim: 64
+  levels: 2
+training_tasks:
+- T1
+- T2
+- T3
+training_integrity_version: hicd.training_integrity.v1
+data_split_version: hicd.original_real_membership_restored.v1
+prediction_semantics_version: hicd.predicted_farmland_nochange.v1
+dino_integration_version: hicd.dinov3_input_features.v1

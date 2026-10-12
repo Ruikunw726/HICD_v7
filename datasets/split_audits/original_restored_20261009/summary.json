@@ -1,0 +1,66 @@
+{
+  "version": "hicd.original_real_membership_restored.v1",
+  "created_at": "2026-10-09T16:34:20.325339+08:00",
+  "source": "/mnt/d/CD/0617final_256_v2",
+  "user_scope": "No renamed samples; restore original real-only membership without further dedup or shuffle",
+  "before_counts": {
+    "train": 61029,
+    "val": 13418,
+    "test": 13418
+  },
+  "published_counts": {
+    "train": 61029,
+    "val": 13077,
+    "test": 13077
+  },
+  "removed_injected_counts": {
+    "train": 0,
+    "val": 341,
+    "test": 341
+  },
+  "names_sha256": {
+    "train": "e8e157e78af20b6160d01596b17ef66199d2b73b8e98f378e29b323542c38f77",
+    "val": "35401981d72955e7e827ca8cddf8140f432089ac145784097bf661d05c48fe46",
+    "test": "80db7345f6efb7ab45e108b05df60770959908a23ecf4295b81c50cb885dde24"
+  },
+  "catalog_sha256": {
+    "train": "51dc78854380b08fa15f6350b74fcbe480f99a1e6cabe7c26a8e522f8f2e6968",
+    "val": "3721b95ec5c31e030bc217797df1eec25933de77c26a5ca1aab11c22f854a207",
+    "test": "2bd40a0b92d0c3c728ef57e2fe3f9d1a6154e2f0235d6114ca70c313f609bd35"
+  },
+  "scene_metadata_sha256": "40887b9c470acceaae705a017c64b08b92f0a97b159fca2e5d224bae6f1f4907",
+  "checks": {
+    "cross_names": {
+      "train__val": 0,
+      "train__test": 0,
+      "val__test": 0
+    },
+    "cross_parent_tiles": {
+      "train__val": 0,
+      "train__test": 0,
+      "val__test": 0
+    },
+    "all_members_resolved": true,
+    "train_names_byte_identical": true,
+    "val_test_original_backup_byte_identical": true
+  },
+  "parent_definition": "Remove only terminal _NN_NN tile coordinates; preserve long parent identifiers/dates",
+  "city_prefix_overlap": {
+    "train__val": 74,
+    "train__test": 74,
+    "val__test": 74
+  },
+  "city_level_holdout": false,
+  "content_hash_dedup_performed": false,
+  "scope": [
+    "T1",
+    "T2",
+    "T3"
+  ],
+  "old_live_names_images_results_unchanged": true,
+  "old_models_require_retraining_for_formal_new_split_comparison": true,
+  "source_paths_pinned": true,
+  "source_images_not_copied_or_made_immutable": true,
+  "split_identity": "9f66845372df4c8730a543ac2899575b8ba40eff31b676355b183991e09db05b",
+  "output": "/mnt/d/CD/0617final_256_v2_disjoint_20261009"
+}
