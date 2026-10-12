@@ -374,3 +374,11 @@ test strict joint P=95.5402%、R=85.0587%、micro-F1=89.9953%、macro-F1=62.2192
 - 已实际创建本聊天heartbeat automation，name“基线完成后启动校正 DINO 主实验”，id=dino，ACTIVE，每小时检查。读取READY后按条件启动，不靠固定明早时刻抢占；未变时静默。成功且两次batch推进/finite健康后记录early_health与台账并暂停automation；失败需报告并暂停，不停其他进程/不自动重试。使用openai-docs调度说明配置；用户无需重复授权这次新run。需要电脑及Codex保持运行、项目可访问。
 
 验收与未来接续的权威入口：`docs/experiments/dino_integration_20261012/READY.md`、ready_manifest.json、cpu_acceptance.json、real_cpu_smoke.json、weight_provenance.json；目录旁CPU日志。新训练后评估必须用eval_dino_corrected_test.py，旧run仍用旧入口。只维护本线/台账，未改公共/02记忆或运行基线。当前状态为CPU_READY_GPU_PREFLIGHT_DEFERRED_UNTIL_BASELINE_COMPLETE。
+
+### 2026-10-12 内层Git仓库已更新并推送
+
+用户明确选择仅更新F:/mambacd/home/HICD_v7，远端origin=Ruikunw726/HICD_v7，master。已提交代码/实验记录40a72a1cf59a4a3bf382a622fc67e8a31181898c（81文件），push正常快进；git ls-remote确认远端同SHA。原本ahead的2834e23作为已有父提交同时发布，无force/history rewrite。
+
+范围为strict评估/Farm语义、恢复划分和catalog、训练完整性、独立DINO校正/接续入口、54项tests、相关记忆/协议/实验报告与紧凑结果JSON。源码数据hash保持不变，基线未被操作，automation id=dino保持接续。单独导出的待提交Git树ee0b8cab通过54项测试和4个bash-n，权重/大输出未纳入。历史删除、旧launch_v9改动及无关文件保留本地未提交；外层仓库和基线没有发布。
+
+详情docs/experiments/repository_update_20261012.md及验证日志；本次推送记录另随小型文档提交发布。新v13仍未启动，不能把Git发布当训练完成。后续接续的模型源码/配置以既定ready_manifest为准，Git HEAD将自然包含此次发布。

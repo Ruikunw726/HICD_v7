@@ -1,0 +1,77 @@
+/root/miniconda/envs/mamba/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+test_failed_test_blocks_launch (test_dino_handoff.HandoffTests.test_failed_test_blocks_launch) ... ok
+test_full_test_and_100_epochs_required (test_dino_handoff.HandoffTests.test_full_test_and_100_epochs_required) ... ok
+test_training_finish_alone_does_not_allow_launch (test_dino_handoff.HandoffTests.test_training_finish_alone_does_not_allow_launch) ... ok
+test_gt_definition_conflict_is_rejected_not_relabelled (test_farmland_semantics.FarmlandSemanticsTests.test_gt_definition_conflict_is_rejected_not_relabelled) ... ok
+test_model_adapter_and_torch_prediction_decode (test_farmland_semantics.FarmlandSemanticsTests.test_model_adapter_and_torch_prediction_decode) ... ok
+test_random_count_replay_equals_pixel_decode_including_diagnostics (test_farmland_semantics.FarmlandSemanticsTests.test_random_count_replay_equals_pixel_decode_including_diagnostics) ... ok
+test_wrong_targets_and_background_fp_remain_errors (test_farmland_semantics.FarmlandSemanticsTests.test_wrong_targets_and_background_fp_remain_errors) ... ok
+test_changed_catalog_rejected_not_fallback (test_resolved_split_catalog.ResolvedCatalogTests.test_changed_catalog_rejected_not_fallback) ... ok
+test_changed_names_rejected_not_fallback (test_resolved_split_catalog.ResolvedCatalogTests.test_changed_names_rejected_not_fallback) ... ok
+test_exact_paths_without_sibling_search (test_resolved_split_catalog.ResolvedCatalogTests.test_exact_paths_without_sibling_search) ... ok
+test_adapter_default_raw_and_explicit_refined (test_strict_joint_protocol.ModelBatchAdapterTests.test_adapter_default_raw_and_explicit_refined) ... ok
+test_adapter_empty_reset_and_format (test_strict_joint_protocol.ModelBatchAdapterTests.test_adapter_empty_reset_and_format) ... ok
+test_adapter_nearest_gt_to_actual_prediction_grid (test_strict_joint_protocol.ModelBatchAdapterTests.test_adapter_nearest_gt_to_actual_prediction_grid) ... ok
+test_adapter_requires_complete_finite_heads_and_gt (test_strict_joint_protocol.ModelBatchAdapterTests.test_adapter_requires_complete_finite_heads_and_gt) ... ok
+test_adapter_wrong_target_does_not_filter_state (test_strict_joint_protocol.ModelBatchAdapterTests.test_adapter_wrong_target_does_not_filter_state) ... ok
+test_all_empty_returns_null_and_json_is_standard (test_strict_joint_protocol.StrictJointProtocolTests.test_all_empty_returns_null_and_json_is_standard) ... ok
+test_background_false_positive (test_strict_joint_protocol.StrictJointProtocolTests.test_background_false_positive) ... ok
+test_background_prediction_with_right_state_is_still_miss (test_strict_joint_protocol.StrictJointProtocolTests.test_background_prediction_with_right_state_is_still_miss) ... ok
+test_background_state_has_no_effect_on_joint (test_strict_joint_protocol.StrictJointProtocolTests.test_background_state_has_no_effect_on_joint) ... ok
+test_cache_missing_arrays_and_duplicate_file_rejected (test_strict_joint_protocol.StrictJointProtocolTests.test_cache_missing_arrays_and_duplicate_file_rejected) ... ok
+test_cpu_cli_shards_and_refusal_to_overwrite (test_strict_joint_protocol.StrictJointProtocolTests.test_cpu_cli_shards_and_refusal_to_overwrite) ... ok
+test_explicit_foreground_none_gt_is_not_ignored (test_strict_joint_protocol.StrictJointProtocolTests.test_explicit_foreground_none_gt_is_not_ignored) ... ok
+test_failed_update_is_transactional (test_strict_joint_protocol.StrictJointProtocolTests.test_failed_update_is_transactional) ... ok
+test_farmland_loss_ignore_does_not_apply_to_metric (test_strict_joint_protocol.StrictJointProtocolTests.test_farmland_loss_ignore_does_not_apply_to_metric) ... ok
+test_float_and_shape_mismatch_rejected (test_strict_joint_protocol.StrictJointProtocolTests.test_float_and_shape_mismatch_rejected) ... ok
+test_gt_ignore_in_either_component_masks_all_statistics (test_strict_joint_protocol.StrictJointProtocolTests.test_gt_ignore_in_either_component_masks_all_statistics) ... ok
+test_legacy_perfect_but_all_specific_states_wrong (test_strict_joint_protocol.StrictJointProtocolTests.test_legacy_perfect_but_all_specific_states_wrong) ... ok
+test_merge_self_rejected (test_strict_joint_protocol.StrictJointProtocolTests.test_merge_self_rejected) ... ok
+test_missing_states_do_not_force_zero_macro (test_strict_joint_protocol.StrictJointProtocolTests.test_missing_states_do_not_force_zero_macro) ... ok
+test_mixed_cross_check (test_strict_joint_protocol.StrictJointProtocolTests.test_mixed_cross_check) ... ok
+test_none_prediction_is_fp_and_fn (test_strict_joint_protocol.StrictJointProtocolTests.test_none_prediction_is_fp_and_fn) ... ok
+test_perfect_single_state_crater (test_strict_joint_protocol.StrictJointProtocolTests.test_perfect_single_state_crater) ... ok
+test_replaced_is_kept (test_strict_joint_protocol.StrictJointProtocolTests.test_replaced_is_kept) ... ok
+test_schema_missing_or_reordered_states_rejected (test_strict_joint_protocol.StrictJointProtocolTests.test_schema_missing_or_reordered_states_rejected) ... ok
+test_streaming_and_merge_equal_one_shot_random_reference (test_strict_joint_protocol.StrictJointProtocolTests.test_streaming_and_merge_equal_one_shot_random_reference) ... ok
+test_tower_is_foreground_but_outside_tasks (test_strict_joint_protocol.StrictJointProtocolTests.test_tower_is_foreground_but_outside_tasks) ... ok
+test_wrong_target_same_state_keeps_state_diagnostic (test_strict_joint_protocol.StrictJointProtocolTests.test_wrong_target_same_state_keeps_state_diagnostic) ... ok
+test_all_displayed_ratios_are_four_decimals (test_strict_joint_reporting.StrictReportingTests.test_all_displayed_ratios_are_four_decimals) ... ok
+test_completed_report_publish_is_deduplicated_and_read_only (test_strict_joint_reporting.StrictReportingTests.test_completed_report_publish_is_deduplicated_and_read_only) ...   [test] Loaded 1 pinned samples from clean split catalog
+Epoch 1 | train loss=3.1235 val loss=2.6543 best joint F1=0.2222
+[hicd.strict_joint.v1] joint micro F1=0.2222 macro F1=0.1667
+Task micro/macro  T1: 0.2500/0.2000  T3: 0.0000/0.0000
+Target         joint_P  joint_R joint_F1   loc_F1 state_F1
+Building        0.2000   0.3333   0.2500   0.7500   0.3333
+Aircraft           n/a   0.0000   0.0000   0.0000   1.0000
+Epoch 2 | train loss=3.1235 val loss=2.6543 best joint F1=0.2222
+[hicd.strict_joint.v1] joint micro F1=0.2222 macro F1=0.1667
+Task micro/macro  T1: 0.2500/0.2000  T3: 0.0000/0.0000
+Target         joint_P  joint_R joint_F1   loc_F1 state_F1
+Building        0.2000   0.3333   0.2500   0.7500   0.3333
+Aircraft           n/a   0.0000   0.0000   0.0000   1.0000
+ok
+test_epoch_and_csv_presentation_preserve_integers_and_inputs (test_strict_joint_reporting.StrictReportingTests.test_epoch_and_csv_presentation_preserve_integers_and_inputs) ... ok
+test_omit_empty_targets_keep_false_positive_only (test_strict_joint_reporting.StrictReportingTests.test_omit_empty_targets_keep_false_positive_only) ... ok
+test_accumulation_flushes_short_window_and_clears_gradients (test_training_integrity.TrainingIntegrityTests.test_accumulation_flushes_short_window_and_clears_gradients) ... Epoch 1/1:   0%|                                                                                            | 0/3 [00:00<?, ?it/s]Epoch 1/1:   0%|                                                                   | 0/3 [00:00<?, ?it/s, loss=0.0000, sCE=0.0000]Epoch 1/1:   0%|                                                                   | 0/3 [00:00<?, ?it/s, loss=0.0000, sCE=0.0000]Epoch 1/1:   0%|                                                                  | 0/3 [00:00<?, ?it/s, loss=-0.3333, sCE=0.0000]Epoch 1/1: 100%|██████████████████████████████████████████████████████████| 3/3 [00:00<00:00, 34.66it/s, loss=-0.3333, sCE=0.0000]
+ok
+test_actual_decoder_applies_probability_prior_for_negative_logits (test_training_integrity.TrainingIntegrityTests.test_actual_decoder_applies_probability_prior_for_negative_logits) ... ok
+test_copy_paste_requires_source_state (test_training_integrity.TrainingIntegrityTests.test_copy_paste_requires_source_state) ... ok
+test_crop_bottom_right_matches_both_labels_and_images (test_training_integrity.TrainingIntegrityTests.test_crop_bottom_right_matches_both_labels_and_images) ... ok
+test_frequency_and_frozen_parameters_registered_once_and_update (test_training_integrity.TrainingIntegrityTests.test_frequency_and_frozen_parameters_registered_once_and_update) ... ok
+test_label_read_failure_is_visible (test_training_integrity.TrainingIntegrityTests.test_label_read_failure_is_visible) ... ok
+test_log_prior_does_not_promote_negative_invalid_logit (test_training_integrity.TrainingIntegrityTests.test_log_prior_does_not_promote_negative_invalid_logit) ... ok
+test_optimizer_coverage_rejects_missing_and_duplicate (test_training_integrity.TrainingIntegrityTests.test_optimizer_coverage_rejects_missing_and_duplicate) ... ok
+test_paired_copy_paste_retains_replaced_and_never_uses_farmland (test_training_integrity.TrainingIntegrityTests.test_paired_copy_paste_retains_replaced_and_never_uses_farmland) ... ok
+test_t123_config_excludes_all_t4_supervision (test_training_integrity.TrainingIntegrityTests.test_t123_config_excludes_all_t4_supervision) ... ok
+test_target_state_and_images_share_geometry_for_100_seeds (test_training_integrity.TrainingIntegrityTests.test_target_state_and_images_share_geometry_for_100_seeds) ... ok
+test_unfreeze_zero_is_noop (test_training_integrity.TrainingIntegrityTests.test_unfreeze_zero_is_noop) ... ok
+test_unknown_raw_is_ignore_not_farmland (test_training_integrity.TrainingIntegrityTests.test_unknown_raw_is_ignore_not_farmland) ... ok
+
+----------------------------------------------------------------------
+Ran 54 tests in 1.273s
+
+OK
+
+Unfroze 0/2 parameter groups
